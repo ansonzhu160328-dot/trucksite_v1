@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>重卡站 V1：方案与回报测算</title>
+<style>
+:root{
+  --bg:#eef2f6;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,0.12);
+
+  --brand:#1f6fd6;         /* 主按钮蓝 */
+  --nav:#2f3f57;           /* 顶栏深蓝 */
+  --nav2:#2a3a52;
+
+  --radius:10px;
+  --shadow:0 6px 18px rgba(15,23,42,0.06);
+  --font: "Microsoft YaHei","PingFang SC","Noto Sans SC",Arial,sans-serif;
+}
+
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  background:var(--bg);
+  font-family:var(--font);
+  color:var(--text);
+}
+
+/* 顶栏（对齐 Sora 深蓝） */
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:10;
+  height:96px;
+  padding:0 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:linear-gradient(180deg,var(--nav) 0%,var(--nav2) 100%);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.topbar .title{
+  margin:0;
+  color:#fff;
+  font-size:28px;
+  font-weight:650;
+  letter-spacing:0.5px;
+}
+.topbar .meta{
+  color:rgba(255,255,255,0.78);
+  font-size:12px;
+  line-height:1.3;
+  text-align:right;
+}
+
+/* 主体容器 */
+.container{
+  max-width:1280px;
+  margin:18px auto 28px;
+  padding:0 18px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:360px 1fr;
+  gap:18px;
+  align-items:start;
+}
+
+/* 卡片 */
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.card h3{
+  margin:0;
+  padding:14px 16px;
+  font-size:16px;
+  font-weight:650;
+  border-bottom:1px solid rgba(15,23,42,0.08);
+  background:#fff;
+}
+
+/* 表单行：左侧标签 + 右侧输入（对齐 Sora 中台表单风） */
+.form-row{
+  display:grid;
+  grid-template-columns:110px 1fr;
+  gap:10px;
+  align-items:center;
+  padding:10px 16px;
+}
+.form-row label{
+  font-size:13px;
+  color:var(--muted);
+}
+input, select{
+  width:100%;
+  height:36px;
+  padding:0 10px;
+  border:1px solid rgba(15,23,42,0.14);
+  border-radius:6px;
+  outline:none;
+  background:#fff;
+}
+input:focus, select:focus{
+  border-color:rgba(31,111,214,0.55);
+  box-shadow:0 0 0 3px rgba(31,111,214,0.12);
+}
+
+/* 折叠区（高级参数） */
+details{
+  border-top:1px solid rgba(15,23,42,0.08);
+}
+summary{
+  padding:12px 16px;
+  cursor:pointer;
+  color:var(--text);
+  font-weight:600;
+}
+
+/* 按钮区 */
+.btnbar{
+  display:flex;
+  gap:10px;
+  padding:12px 16px 16px;
+}
+.btn-primary{
+  background:var(--brand);
+  color:#fff;
+  border:1px solid var(--brand);
+  border-radius:6px;
+  padding:10px 14px;
+  font-weight:650;
+  cursor:pointer;
+}
+.btn-primary:hover{ filter:brightness(0.95); }
+
+.btn-ghost{
+  background:#fff;
+  color:var(--text);
+  border:1px solid rgba(15,23,42,0.18);
+  border-radius:6px;
+  padding:10px 14px;
+  font-weight:650;
+  cursor:pointer;
+}
+.btn-ghost:hover{
+  background:rgba(15,23,42,0.03);
+}
+
+/* 右侧分区标题条（像 Sora 那种 section） */
+.section-title{
+  margin:0;
+  padding:14px 16px;
+  font-size:16px;
+  font-weight:650;
+  border-bottom:1px solid rgba(15,23,42,0.08);
+}
+
+/* KPI 行 */
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  padding:14px 16px 16px;
+}
+.kpi{
+  border:1px solid rgba(15,23,42,0.10);
+  border-radius:8px;
+  padding:12px;
+  background:#fff;
+}
+.kpi .k{ font-size:12px; color:var(--muted); margin-bottom:8px; }
+.kpi .v{ font-size:22px; font-weight:750; }
+.kpi .s{ font-size:12px; color:var(--muted); margin-top:8px; }
+
+/* 表格 */
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin:0;
+}
+th, td{
+  border:1px solid rgba(15,23,42,0.12);
+  padding:10px 10px;
+  font-size:13px;
+}
+th{
+  background:rgba(15,23,42,0.03);
+  font-weight:650;
+}
+tbody tr:hover{ background:rgba(31,111,214,0.04); }
+
+/* 详情测算块 */
+pre{
+  margin:0;
+  padding:14px 16px 18px;
+  background:#fff;
+  border-top:1px solid rgba(15,23,42,0.08);
+  font-size:12px;
+  line-height:1.6;
+  overflow:auto;
+}
+
+/* 小屏适配 */
+@media (max-width: 980px){
+  .grid{ grid-template-columns:1fr; }
+  .kpis{ grid-template-columns:1fr 1fr; }
+}
+
+/* ====== A) 全局字体：中文用雅黑系，数字/英文优先 Times New Roman ====== */
+:root{
+  --font: "Times New Roman","Microsoft YaHei","PingFang SC","Noto Sans SC",Arial,sans-serif;
+
+  /* 字号体系（你要“有大有小且协调”） */
+  --fs-h1: 22px;
+  --fs-h2: 16px;
+  --fs-h3: 14px;
+  --fs-body: 14px;
+  --fs-small: 12px;
+
+  /* 行高 */
+  --lh: 1.55;
+}
+
+body{
+  font-family: var(--font);
+  line-height: var(--lh);
+}
+
+/* 常见控件也强制同一字体（避免混进宋体） */
+button, input, select, textarea, table{
+  font-family: var(--font);
+}
+
+/* 标题/分区字号层级 */
+.title{               /* 你的 h2.title */
+  font-size: var(--fs-h1);
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+
+.card h3{
+  font-size: var(--fs-h2);
+  font-weight: 700;
+}
+
+label, .muted, .help, .hint{
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* 表格字号稍小一点更“金融报表” */
+table{
+  font-size: var(--fs-h3);
+}
+th{
+  font-weight: 650;
+}
+
+/* ====== B) 顶部栏：左对齐标题、右对齐 meta，并且对齐到内容区边界 ====== */
+/* 关键：用 padding: calc((100vw - 1220px)/2) 让 topbar 内容与 container 同一“左边线” */
+.topbar{
+  /* 你的蓝色可保留：这里只做布局与对齐 */
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  /* 让顶部栏的内容左右边界 = container 的左右边界 */
+  padding-left: max(24px, calc((100vw - 1220px)/2));
+  padding-right: max(24px, calc((100vw - 1220px)/2));
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+/* 你 topbar 里有两个空 div：直接隐藏，避免影响布局 */
+.topbar > div:first-child,
+.topbar > div:last-child{
+  display: none;
+}
+
+/* 让标题在左边（并且“重”字与左侧大卡片边界对齐） */
+.topbar .title{
+  margin: 0;          /* 去掉 h2 默认 margin */
+  order: 1;
+  text-align: left;
+}
+
+/* 让 meta 跑到最右边，并且与右侧大框右边线对齐 */
+.topbar .meta{
+  order: 2;
+  margin-left: auto;
+  text-align: right;
+  font-size: var(--fs-small);
+  color: rgba(255,255,255,.86); /* 顶部栏是蓝的，字要更干净 */
+  line-height: 1.35;
+}
+
+/* 如果你的 topbar 背景是深蓝，标题也改成浅色更像 Sora 图 */
+.topbar .title{
+  color: rgba(255,255,255,.95);
+}
+</style>
+
+</head>
+
+<body>
+  <div class="topbar">
+    <div></div>
+    <div class="meta">
+      开发单位：盈通智联<br/>
+      版本号：V1.0
+    </div>
+    <h2 class="title">重卡充电站投资辅助决策系统</h2>
+    <div></div>
+  </div>
+
+  <div class="container">
+    <div class="grid">
+
+
+  <div class="card">
+    <h3>输入参数</h3>
+    <div class="row">
+  <div style="flex:1; min-width:260px;">
+    <label>场站位置</label>
+    <input id="loc" type="text" value="" placeholder="例如：佛山顺德 / 广州白云 / 深圳龙岗">
+  </div>
+</div>
+
+
+
+    <div class="row">
+      <div>
+        <label>场地长度 (m)</label>
+        <input id="len" type="number" value="36" step="0.1">
+      </div>
+      <div>
+        <label>场地宽度 (m)</label>
+        <input id="wid" type="number" value="32" step="0.1">
+      </div>
+      
+    </div>
+
+    <details class="card" style="margin-top:12px;">
+      <summary style="cursor:pointer; font-weight:bold;">高级参数设置（可选）</summary>
+
+      <div class="row" style="margin-top:12px;">
+        <div>
+          <label>单枪日充电量 (kWh/天)</label>
+          <input id="kwh" type="number" value="1000" step="10">
+        </div>
+        <div>
+          <label>服务费 (元/度)</label>
+          <input id="fee" type="number" value="0.3" step="0.01">
+        </div>
+        <div>
+          <label>年运营天数 (天)</label>
+          <input id="days" type="number" value="330" step="1">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <div>
+          <label>电力投资单价 (元/kVA)</label>
+          <input id="powerCost" type="number" value="600" step="10">
+        </div>
+        <div>
+          <label>土建单价 (元/㎡)</label>
+          <input id="civilCost" type="number" value="200" step="10">
+        </div>
+        <div>
+          <label>单桩成本 (元/台)</label>
+          <input id="pileCost" type="number" value="45000" step="500">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <div>
+          <label>场地租金 (元/㎡·月)</label>
+          <input id="rent" type="number" value="0" step="1">
+        </div>
+        <div>
+          <label>看守人数 (人)</label>
+          <input id="staff" type="number" value="0" step="1">
+        </div>
+        <div>
+          <label>人均工资 (元/月·人)</label>
+          <input id="salary" type="number" value="0" step="100">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <div>
+          <label>每桩折算容量 (kVA/桩)</label>
+          <input id="pileKva" type="number" value="400" step="10">
+        </div>
+        <div>
+          <label>每桩枪数 (枪/桩)</label>
+          <input id="guns" type="number" value="2" step="1">
+        </div>        
+      </div>
+
+      <div style="margin-top:12px;">
+        <button id="btnReset" type="button">恢复默认口径</button>
+      </div>
+    </details>
+
+    <div style="margin-top:16px;">
+  <button id="btnCalc" type="button" class="btn-primary">生成方案</button>
+  <button id="btnWord" type="button" class="btn-ghost">导出初步设计方案</button>
+  <button id="btnSens" type="button" class="btn-ghost">敏感性分析</button>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <h3>投资评估</h3>
+        <div class="kpis">
+      <div class="kpi">
+        <div class="k">推荐配置</div>
+        <div class="v" id="kpiConfig">—</div>
+        <div class="s" id="kpiStalls">车位：—</div>
+        <div class="s" id="kpiPower">电力容量：—</div>
+      </div>
+      <div class="kpi">
+        <div class="k">预计总投资</div>
+        <div class="v" id="kpiInvest">—</div>
+        <div class="s">投资（电力+土建+设备）</div>
+      </div>
+      <div class="kpi">
+        <div class="k">年收入（服务费）</div>
+        <div class="v" id="kpiRevenue">—</div>
+        <div class="s">按服务费口径</div>
+      </div>
+      <div class="kpi">
+        <div class="k">净收入</div>
+        <div class="v" id="kpiNet">—</div>
+        <div class="s">
+          回收期：<span id="kpiPayback">—</span>
+          <span id="kpiBadge" class="badge">—</span>
+        </div>
+      </div>
+    </div>
+
+    <hr style="margin:8px 0 16px; border:none; border-top:1px solid #eee;">
+
+<h3>敏感性分析</h3>
+<div id="sensSummary" class="muted">尚未运行敏感性分析</div>
+
+<div style="overflow:auto; margin-top:10px;">
+  <table id="sensTable" border="1" cellspacing="0" cellpadding="6"
+    style="border-collapse:collapse; width:100%; min-width:860px;">
+    <thead>
+      <tr>
+        <th>序号</th>
+        <th>利用率(kWh/枪·天)</th>
+        <th>服务费(元/度)</th>
+        <th>租金(元/㎡·月)</th>
+        <th>净年现金流(万元/年)</th>
+        <th>净回收期(年)</th>
+        <th>状态</th>
+      </tr>
+    </thead>
+    <tbody id="sensBody">
+      <tr><td colspan="7" class="muted">（等待运行）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<hr style="margin:16px 0; border:none; border-top:1px solid #eee;">
+
+<h3>详细测算</h3>
+<pre id="out" class="muted" style="background:#fff; color:var(--text); border:1px solid var(--border);"></pre>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  function money(x) { return (Math.round(x)).toLocaleString('zh-CN') + " 元"; }
+  function num(x) { return (Math.round(x * 100) / 100).toLocaleString('zh-CN'); }
+
+  function resetDefaults() {
+    if ($('loc')) $('loc').value = "";
+    $('kwh').value = 1000;
+    $('fee').value = 0.3;
+    $('days').value = 330;
+    $('powerCost').value = 600;
+    $('civilCost').value = 200;
+    $('pileCost').value = 45000;
+    $('pileKva').value = 400;
+    $('guns').value = 2;   
+    $('rent').value = 0;
+    $('staff').value = 0;
+    $('salary').value = 0;
+  }
+
+  function buildPayload() {
+    const payload = {
+      site_location: String($('loc')?.value || "").trim(),
+      site_length_m: parseFloat($('len').value),
+      site_width_m: parseFloat($('wid').value),
+      
+      pile_kva_per: parseFloat($('pileKva').value),
+      guns_per_pile: parseInt($('guns').value, 10),
+
+      kwh_per_gun_per_day: parseFloat($('kwh').value),
+      service_fee_yuan_per_kwh: parseFloat($('fee').value),
+      days_per_year: parseInt($('days').value, 10),
+
+      power_cost_yuan_per_kva: parseFloat($('powerCost').value),
+      civil_cost_yuan_per_sqm: parseFloat($('civilCost').value),
+      pile_cost_yuan_each: parseFloat($('pileCost').value),
+
+      
+      rent_yuan_per_sqm_month: parseFloat($('rent').value),
+      staff_count: parseInt($('staff').value, 10),
+      salary_yuan_per_month: parseFloat($('salary').value),
+    };
+    console.log("DEBUG payload:", payload);
+    return payload;
+  }
+
+
+    function safeNum(x) {
+    const v = Number(x);
+    return Number.isFinite(v) ? v : null;
+  }
+
+  async function postCalc(payload) {
+    const res = await fetch('/api/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(t);
+    }
+    return await res.json();
+  }
+
+
+  async function runCalc() {
+    try {
+      const payload = buildPayload();
+      const res = await fetch('/api/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const t = await res.text();
+        $('out').innerText = "计算失败：" + t;
+        return;
+      }
+
+      const d = await res.json();
+
+      const investWan = (d.invest_total_yuan / 10000).toFixed(1);
+      const revenueWan = (d.revenue_year_yuan / 10000).toFixed(1);
+      const revenueNetWan = (d.revenue_net_year_yuan / 10000).toFixed(1);
+
+      const payback = d.payback_years ? d.payback_years.toFixed(1) : "N/A";
+      const paybackNet = d.payback_net_years ? d.payback_net_years.toFixed(1) : "N/A";
+
+            // ===== 销售摘要四宫格 KPI =====
+      $('kpiConfig').innerText = `${d.n_recommend ?? '—'} 台 400kW 一机双枪`;
+      $('kpiStalls').innerText = `车位：${d.stalls ?? '—'}（1桩2车位）`;
+      const n = Number(d.n_recommend ?? 0);
+      const powerKva = n * 400;
+      $('kpiPower').innerText = `电力容量：${powerKva.toLocaleString('zh-CN')} kVA`;
+      $('kpiInvest').innerText = `${investWan} 万`;
+      $('kpiRevenue').innerText = `${revenueWan} 万/年`;
+      $('kpiNet').innerText = `${revenueNetWan} 万/年`;
+      $('kpiPayback').innerText = `${paybackNet} 年`;
+
+      // 徽标：🟢🟡🔴
+      let badge = $('kpiBadge');
+      badge.className = "badge";
+      if (paybackNet === "N/A") {
+        badge.innerText = "N/A";
+      } else {
+        const pb = parseFloat(paybackNet);
+        if (!Number.isFinite(pb)) badge.innerText = "N/A";
+        else if (pb <= 2) { badge.innerText = "🟢 优秀"; badge.classList.add('ok'); }
+        else if (pb <= 3) { badge.innerText = "🟡 可接受"; badge.classList.add('warn'); }
+        else { badge.innerText = "🔴 偏弱"; badge.classList.add('bad'); }
+      }
+
+
+      let summary = `
+【场站建设初设建议和回报评估】
+
+充电设备配置：${d.n_recommend} 台 400kW 一机双枪充电桩
+预计总投资：${investWan} 万元
+预计年收入（服务费口径）：${revenueWan} 万元
+预计净年现金流（扣租金/人工）：${revenueNetWan} 万元
+预计回报周期（净收入）：${paybackNet} 年
+`;
+
+      const lines = [];
+      lines.push(`推荐桩数 N = ${d.n_recommend}（电力约束 n_power=${d.n_power}；面积约束 n_area=${d.n_area}）`);
+      lines.push(`车位数 = ${d.stalls}（1桩服务2车位）`);
+      lines.push(`场地面积 = ${num(d.site_area_sqm)} ㎡；模块占用面积 = ${num(d.used_area_sqm)} ㎡`);
+      lines.push(`投资：电力 ${money(d.invest_power_yuan)}；土建 ${money(d.invest_civil_yuan)}；设备 ${money(d.invest_pile_yuan)}；合计 ${money(d.invest_total_yuan)}`);
+      lines.push(`年充电量 = ${num(d.energy_year_kwh)} kWh；年收入（按服务费口径）= ${money(d.revenue_year_yuan)}`);
+      lines.push(`年租金 = ${money(d.rent_year_yuan)}；年人工 = ${money(d.labor_year_yuan)}`);
+      lines.push(`净年现金流 = ${money(d.revenue_net_year_yuan)}；净回收期 = ${paybackNet} 年`);
+
+      if (d.notes && d.notes.length) {
+        lines.push("风险/提示：");
+        d.notes.forEach(x => lines.push(" - " + x));
+      }
+
+        $('out').innerText = summary + "\n\n" + lines.join("\n");
+
+    } catch (e) {
+      console.error(e);
+      $('out').innerText = "前端异常：" + (e?.message || e);
+    }
+  }
+
+  async function exportWord() {
+    try {
+      const payload = buildPayload();
+
+      const res = await fetch('/api/report_word', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const t = await res.text();
+        alert("导出失败：" + t);
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "重卡充电站初步设计方案.docx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("导出异常：" + e.message);
+    }
+  }
+
+
+  async function runSensitivity() {
+    // 1) 取当前输入作为“基准”
+    const base = buildPayload();
+
+    const baseKwh = base.kwh_per_gun_per_day;
+    const baseFee = base.service_fee_yuan_per_kwh;
+    const baseRent = base.rent_yuan_per_sqm_month;
+
+    // 2) 三档设置：A利用率 × B服务费 × C租金（27组）
+    const kwhLevels = [
+      Math.round(baseKwh * 0.6),
+      Math.round(baseKwh * 1.0),
+      Math.round(baseKwh * 1.2),
+    ];
+
+    const feeLevels = [
+      Math.round(baseFee * 0.8 * 100) / 100,
+      Math.round(baseFee * 1.0 * 100) / 100,
+      Math.round(baseFee * 1.2 * 100) / 100,
+    ];
+
+    const rentLevels = [
+      0,
+      Math.round(baseRent * 1.0),
+      Math.round(baseRent * 1.5),
+    ];
+
+    // UI 初始化
+    $('sensSummary').innerText = "正在计算 27 组情景（利用率×服务费×租金）...";
+    $('sensBody').innerHTML = `<tr><td colspan="7" class="muted">计算中...</td></tr>`;
+
+    const rows = [];
+    let idx = 0;
+
+    try {
+      for (const kwh of kwhLevels) {
+        for (const fee of feeLevels) {
+          for (const rent of rentLevels) {
+            idx += 1;
+
+            const p = { ...base };
+            p.kwh_per_gun_per_day = kwh;
+            p.service_fee_yuan_per_kwh = fee;
+            p.rent_yuan_per_sqm_month = rent;
+
+            const r = await postCalc(p);
+
+            const net = safeNum(r.revenue_net_year_yuan);
+            const netWan = net === null ? null : (net / 10000);
+
+            const pb = safeNum(r.payback_net_years);
+
+            // 状态规则：净<=0 直接红；否则按回收期阈值分色
+            let status = "🟢";
+            if (net === null || net <= 0) status = "🔴";
+            else if (pb !== null && pb > 3) status = "🔴";
+            else if (pb !== null && pb > 2) status = "🟡";
+
+            rows.push({ idx, kwh, fee, rent, netWan, pb, status });
+          }
+        }
+      }
+
+      // 3) 渲染表格
+      $('sensBody').innerHTML = rows.map(x => {
+        const netText = x.netWan === null ? "N/A" : x.netWan.toFixed(1);
+        const pbText = x.pb === null ? "N/A" : x.pb.toFixed(1);
+        return `
+          <tr>
+            <td>${x.idx}</td>
+            <td>${x.kwh}</td>
+            <td>${x.fee}</td>
+            <td>${x.rent}</td>
+            <td>${netText}</td>
+            <td>${pbText}</td>
+            <td>${x.status}</td>
+          </tr>
+        `;
+      }).join("");
+
+      // 4) 二级视图（销售总结）：基准/最好/最差 + 最敏感因子
+      const baseline = rows.find(x => x.kwh === kwhLevels[1] && x.fee === feeLevels[1] && x.rent === rentLevels[1]);
+
+      // 最好/最差（按净回收期pb排序，红色/空视为最差）
+      const score = (x) => (x.pb === null || x.status === "🔴") ? 1e9 : x.pb;
+      const sorted = [...rows].sort((a, b) => score(a) - score(b));
+      const best = sorted[0];
+      const worst = sorted[sorted.length - 1];
+
+      // 单变量扫描：其它固定在中档，比较回收期跨度（越大越敏感）
+      function scan(filterFn) {
+        return rows.filter(filterFn).map(x => score(x)).filter(v => v < 1e8);
+      }
+      function range(vals) {
+        if (!vals.length) return null;
+        return Math.max(...vals) - Math.min(...vals);
+      }
+
+      const rKwh = range(scan(x => x.fee === feeLevels[1] && x.rent === rentLevels[1]));
+      const rFee = range(scan(x => x.kwh === kwhLevels[1] && x.rent === rentLevels[1]));
+      const rRent = range(scan(x => x.kwh === kwhLevels[1] && x.fee === feeLevels[1]));
+
+      const sensArr = [
+        { name: "利用率", delta: rKwh },
+        { name: "服务费", delta: rFee },
+        { name: "租金", delta: rRent },
+      ].sort((a, b) => (b.delta ?? -1) - (a.delta ?? -1));
+
+      const sensText = sensArr[0].delta === null
+        ? "最敏感因子：无法计算（可能中档已出现净现金流<=0）"
+        : `最敏感因子：${sensArr[0].name}（净回收期跨度≈${sensArr[0].delta.toFixed(1)}年）`;
+
+      function fmt(x) {
+        if (!x) return "N/A";
+        const net = x.netWan === null ? "N/A" : (x.netWan.toFixed(1) + "万/年");
+        const pb = x.pb === null ? "N/A" : (x.pb.toFixed(1) + "年");
+        return `kWh=${x.kwh}, fee=${x.fee}, rent=${x.rent} → 净现金流${net}，净回收期${pb}，${x.status}`;
+      }
+
+      $('sensSummary').innerText =
+`【敏感性分析总结】
+- 基准情景：${fmt(baseline)}
+- 最佳情景：${fmt(best)}
+- 最差情景：${fmt(worst)}
+- ${sensText}
+（状态规则：🔴=净现金流<=0 或 回收期>3年；🟡=2~3年；🟢=<=2年）`;
+
+    } catch (e) {
+      console.error(e);
+      $('sensSummary').innerText = "敏感性分析失败：" + (e?.message || e);
+      $('sensBody').innerHTML = `<tr><td colspan="7" class="muted">失败：请打开 F12 Console 查看错误</td></tr>`;
+    }
+  }
+
+
+
+  // 绑定事件：彻底避免 onclick / 作用域 / 缓存等坑
+  window.addEventListener('DOMContentLoaded', () => {
+    $('btnReset').addEventListener('click', resetDefaults);
+    $('btnCalc').addEventListener('click', runCalc);
+    $('btnWord').addEventListener('click', exportWord);
+    
+    $('btnSens').addEventListener('click', runSensitivity);
+
+
+
+  });
+</script>
+
+</body>
+</html>
