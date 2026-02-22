@@ -627,7 +627,9 @@ th{
         d.notes.forEach(x => lines.push(" - " + x));
       }
 
-        $('out').innerText = summary + "\n\n" + lines.join("\n");
+      const remark = "备注：如需详细的场站设计方案（CAD设计图）、产品配置方案及参数、请致电1*********。";
+
+        $('out').innerText = summary + "\n\n" + lines.join("\n") + "\n" + remark;
 
     } catch (e) {
       console.error(e);
