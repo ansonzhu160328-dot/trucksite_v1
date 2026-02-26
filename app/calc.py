@@ -53,7 +53,7 @@ def calc_plan(d: dict) -> dict:
     PILE_KVA_POWER = 400.0               # 电力容量=桩数*400kVA（你要求）
 
     # 1) 长度决定：每排可布置车位数 = floor(长度/STALL_WIDTH_M)
-    stalls_per_row = int(site_length // STALL_WIDTH_M) if site_length >= REQ_LEN_MIN_M else 0
+    stalls_per_row_raw = int(site_length // STALL_WIDTH_M) if site_length >= REQ_LEN_MIN_M else 0
 
     # 2) 宽度决定：可布置几排（数据驱动：分段表 + 查表）
     row_count = 0
@@ -99,11 +99,46 @@ def calc_plan(d: dict) -> dict:
 
     row_count, layout_note = _rows_for_width(site_width)
 
-    # 3) 车位数量
-    stalls = stalls_per_row * row_count
+    # 3) 单排绘图口径修正：变压器左右两侧车位数都要求为偶数
+    stalls_per_row_draw = stalls_per_row_raw
+    stalls_left = 0
+    stalls_right = 0
 
-    # 4) 桩数量（布局口径）：桩 = 车位/2（取整）
-    n_layout = stalls // 2
+    if row_count == 1:
+        s = stalls_per_row_raw
+        if s < 2:
+            stalls_per_row_draw = 0
+            layout_note = (layout_note + "；" if layout_note else "") + "单排可用车位数不足2，无法按变压器居中口径布置。"
+        else:
+            if s % 2 == 1:
+                old_s = s
+                s -= 1
+                layout_note = (
+                    layout_note + "；" if layout_note else ""
+                ) + f"单排要求车位总数为偶数（2车位/桩），已从{old_s}调整为{s}。"
+
+            left = s // 2
+            right = s - left
+
+            if left % 2 == 1:
+                left -= 1
+                right += 1
+
+            stalls_left = left
+            stalls_right = right
+            stalls_per_row_draw = s
+            layout_note = (
+                layout_note + "；" if layout_note else ""
+            ) + f"单排变压器左右两侧车位数需为偶数（避免3+3），已拆分为{left}+{right}。"
+
+    # 4) 车位数量（单排按绘图口径，多排按原口径）
+    if row_count == 1:
+        stalls_total = stalls_per_row_draw
+    else:
+        stalls_total = stalls_per_row_raw * row_count
+
+    # 5) 桩数量（布局口径）：桩 = 车位/2（取整）
+    n_layout = stalls_total // 2
 
     # 5) 电力约束：现在“变压器容量不再输入”，先不做上限约束（无限大）
     #    如果未来你要引入“电网接入上限/客户可获批容量”，再把 n_power 改为 floor(可获批kVA/400)。
@@ -163,7 +198,7 @@ def calc_plan(d: dict) -> dict:
         notes.append(layout_note)
 
     notes.append(
-        f"布置口径：每排车位数=floor(长度/{STALL_WIDTH_M:.0f})={stalls_per_row}；排数={row_count}；车位={stalls}；桩(布局)=车位/2={n_layout}。"
+        f"布置口径：每排原始车位数=floor(长度/{STALL_WIDTH_M:.0f})={stalls_per_row_raw}；绘图每排车位数={stalls_per_row_draw}；排数={row_count}；车位={stalls_total}；桩(布局)=车位/2={n_layout}。"
     )
 
     notes.append(
@@ -185,9 +220,15 @@ def calc_plan(d: dict) -> dict:
     return {
         "site_area_sqm": site_area,
 
-        "stalls_per_row": stalls_per_row,
+        "stalls_per_row": stalls_per_row_draw,
+        "stalls_per_row_raw": stalls_per_row_raw,
+        "stalls_per_row_draw": stalls_per_row_draw,
         "row_count": row_count,
-        "stalls": stalls,
+        "layout_note": layout_note,
+        "stalls": stalls_total,
+        "stalls_total": stalls_total,
+        "stalls_left": stalls_left,
+        "stalls_right": stalls_right,
         "n_layout": n_layout,
 
         "n_power": n_power,        
