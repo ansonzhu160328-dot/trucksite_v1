@@ -649,6 +649,17 @@ th{
       $('out').innerText = "前端异常：" + (e?.message || e);
       $('layout').innerHTML = "";
     }
+
+    // 第一排顶部外侧桩
+    const firstTopRowY = marginY + moduleGapPx;
+    drawPilesAtY(shapes, firstTopRowY - moduleGapPx + (moduleGapPx - pileH) / 2);
+    // 最后一排底部外侧桩
+    drawPilesAtY(shapes, lastRowBottomY + (moduleGapPx - pileH) / 2);
+
+    container.innerHTML = `<svg viewBox="0 0 ${totalW} ${totalH}" width="100%" height="${totalH}" xmlns="http://www.w3.org/2000/svg">
+      <text x="${marginX}" y="12" font-size="12" fill="#334155">多排简易布局（模块间距=${MODULE_GAP_M}m；通道=车位长度）</text>
+      ${shapes.join('')}
+    </svg>`;
   }
 
   function renderLayoutSVG(data) {
