@@ -654,6 +654,102 @@ th{
   function renderLayoutSVG(data) {
     const container = $('layout');
     const rowCount = Number(data.row_count || 0);
+    const stallsRaw = Number(data.stalls_per_row_raw || 0);
+    const stallsDraw = Number(data.stalls_per_row_draw || 0);
+
+    if (!rowCount || !stallsDraw) {
+      container.innerHTML = '<div class="layout-empty">当前参数下无法生成简易布局图。</div>';
+      return;
+    }
+
+    const stallW = 28;
+    const stallH = 34;
+    const gap = 4;
+    const margin = 16;
+
+    if (rowCount === 1) {
+      const left = Number(data.stalls_left || 0);
+      const right = Number(data.stalls_right || 0);
+
+      if (left + right !== stallsDraw || left < 0 || right < 0) {
+        container.innerHTML = '<div class="layout-empty">单排拆分数据异常，无法绘图。</div>';
+        return;
+      }
+
+      const transformerW = 72;
+      const centerGap = 20;
+      const totalW = margin * 2 + left * (stallW + gap) + right * (stallW + gap) + transformerW + centerGap * 2;
+      const totalH = margin * 2 + stallH + 36;
+      let shapes = [];
+
+      const leftStartX = margin;
+      for (let i = 0; i < left; i++) {
+        const x = leftStartX + i * (stallW + gap);
+        shapes.push(`<rect x="${x}" y="${margin + 28}" width="${stallW}" height="${stallH}" fill="#dbeafe" stroke="#1e40af"/>`);
+      }
+
+      const tfX = leftStartX + left * (stallW + gap) + centerGap;
+      shapes.push(`<rect x="${tfX}" y="${margin + 22}" width="${transformerW}" height="${stallH + 12}" fill="#fde68a" stroke="#92400e"/>`);
+      shapes.push(`<text x="${tfX + transformerW / 2}" y="${margin + 47}" text-anchor="middle" font-size="12">变压器</text>`);
+
+      const rightStartX = tfX + transformerW + centerGap;
+      for (let i = 0; i < right; i++) {
+        const x = rightStartX + i * (stallW + gap);
+        shapes.push(`<rect x="${x}" y="${margin + 28}" width="${stallW}" height="${stallH}" fill="#dbeafe" stroke="#1e40af"/>`);
+      }
+
+      for (let i = 0; i < Math.floor(left / 2); i++) {
+        const x = leftStartX + i * 2 * (stallW + gap) + stallW - 4;
+        shapes.push(`<rect x="${x}" y="${margin + 8}" width="8" height="12" fill="#dc2626"/>`);
+      }
+      for (let i = 0; i < Math.floor(right / 2); i++) {
+        const x = rightStartX + i * 2 * (stallW + gap) + stallW - 4;
+        shapes.push(`<rect x="${x}" y="${margin + 8}" width="8" height="12" fill="#dc2626"/>`);
+      }
+
+      container.innerHTML = `<svg viewBox="0 0 ${totalW} ${totalH}" width="100%" height="${totalH}" xmlns="http://www.w3.org/2000/svg">
+        <text x="${margin}" y="14" font-size="12" fill="#334155">单排简易布局（左${left} + 右${right}）</text>
+        ${shapes.join('')}
+      </svg>`;
+      return;
+    }
+
+    const rowStalls = stallsRaw > 0 ? stallsRaw : stallsDraw;
+    const moduleH = stallH * 2 + 34;
+    const totalW = margin * 2 + rowStalls * (stallW + gap);
+    const totalH = margin * 2 + Math.ceil(rowCount / 2) * moduleH;
+    let shapes = [];
+
+    function drawRow(y, rowIdx) {
+      for (let i = 0; i < rowStalls; i++) {
+        const x = margin + i * (stallW + gap);
+        shapes.push(`<rect x="${x}" y="${y}" width="${stallW}" height="${stallH}" fill="#e2e8f0" stroke="#334155"/>`);
+      }
+      for (let p = 0; p < Math.floor(rowStalls / 2); p++) {
+        const x = margin + p * 2 * (stallW + gap) + stallW - 4;
+        shapes.push(`<rect x="${x}" y="${y - 14}" width="8" height="12" fill="#dc2626"/>`);
+      }
+      shapes.push(`<text x="${margin}" y="${y + stallH + 14}" font-size="11" fill="#475569">第${rowIdx + 1}排</text>`);
+    }
+
+    for (let m = 0; m < Math.ceil(rowCount / 2); m++) {
+      const topY = margin + m * moduleH;
+      const firstRow = m * 2;
+      drawRow(topY, firstRow);
+      if (firstRow + 1 < rowCount) {
+        drawRow(topY + stallH + 18, firstRow + 1);
+      }
+    }
+
+    container.innerHTML = `<svg viewBox="0 0 ${totalW} ${totalH}" width="100%" height="${totalH}" xmlns="http://www.w3.org/2000/svg">
+      <text x="${margin}" y="14" font-size="12" fill="#334155">多排简易布局（共${rowCount}排）</text>
+      ${shapes.join('')}
+    </svg>`;
+  }
+
+  function renderLayoutSVG(data) {
+    const container = $('layout');
+    const rowCount = Number(data.row_count || 0);
     const stallsDraw = Number(data.stalls_per_row_draw || 0);
 
     if (!rowCount || !stallsDraw) {
