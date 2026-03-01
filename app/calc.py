@@ -44,9 +44,10 @@ def calc_plan(d: dict) -> dict:
     # =========================
     # 口径（你定义的工程经验）
     # =========================
-    STALL_WIDTH_M = 6.0                  # 单车位宽（重卡车宽口径）
+    STALL_WIDTH_M = 4.0                  # 单车位宽（重卡车宽口径）
     REQ_LEN_MIN_M = STALL_WIDTH_M * 2    # 长度<12：不具备建站（按2个车位宽）
     REQ_WIDTH_MIN_M = 30.0               # 宽度<30：转弯半径不足，不具备建站
+    TX_SLOTS_PER_ROW = 2                 # 每排变压器占用车位格数（可改为4/5...）
 
     # 电力口径（新）
     PILE_KVA_RULE = 200.0                # 仍保留：仅用于“旧字段 transformer_required_kva”的兼容（见输出）
@@ -110,32 +111,47 @@ def calc_plan(d: dict) -> dict:
             stalls_per_row_draw = 0
             layout_note = (layout_note + "；" if layout_note else "") + "单排可用车位数不足2，无法按变压器居中口径布置。"
         else:
-            if s % 2 == 1:
-                old_s = s
-                s -= 1
-                layout_note = (
-                    layout_note + "；" if layout_note else ""
-                ) + f"单排要求车位总数为偶数（2车位/桩），已从{old_s}调整为{s}。"
+                # 1) 单排：raw 为奇数则最右边 1 个不画（保证总车位偶数）
+                if s % 2 == 1:
+                    old_s = s
+                    s -= 1
+                    layout_note = (
+                        layout_note + "；" if layout_note else ""
+                    ) + f"单排要求车位总数为偶数，已从{old_s}调整为{s}（最右侧1车位不绘制、不布桩）。"
 
-            left = s // 2
-            right = s - left
+                # 2) 单排：中间固定 2 个车位给变压器
+                TX_SLOTS = 2
+                if s < TX_SLOTS:
+                    stalls_per_row_draw = 0
+                    stalls_left = 0
+                    stalls_right = 0
+                    layout_note = (layout_note + "；" if layout_note else "") + "单排车位数不足2，无法布置中置变压器。"
+                else:
+                    remain = s - TX_SLOTS  # 变压器占2车位后剩余车位
+                    left = remain // 2
+                    right = remain - left
 
-            if left % 2 == 1:
-                left -= 1
-                right += 1
+                    # 3) 单排：左右两侧都必须是偶数车位（避免3+3）
+                    if left % 2 == 1:
+                        left -= 1
+                        right += 1
 
-            stalls_left = left
-            stalls_right = right
-            stalls_per_row_draw = s
-            layout_note = (
-                layout_note + "；" if layout_note else ""
-            ) + f"单排变压器左右两侧车位数需为偶数（避免3+3），已拆分为{left}+{right}。"
+                    stalls_left = left
+                    stalls_right = right
+                    stalls_per_row_draw = s
+                    layout_note = (
+                        layout_note + "；" if layout_note else ""
+                    ) + f"单排中间预留{TX_SLOTS}车位放变压器；左右两侧车位需为偶数，已拆分为{left}+{right}。"
+
 
     # 4) 车位数量（单排按绘图口径，多排按原口径）
     if row_count == 1:
-        stalls_total = stalls_per_row_draw
+        # 单排：可服务车位 = 左侧 + 右侧（中间 TX_SLOTS_PER_ROW 车位给变压器）
+        stalls_total = stalls_left + stalls_right
     else:
-        stalls_total = stalls_per_row_raw * row_count
+        # 多排：每排可服务车位 = 原始车位 - 变压器占位
+        usable_per_row = max(0, stalls_per_row_raw - TX_SLOTS_PER_ROW)
+        stalls_total = usable_per_row * row_count
 
     # 5) 桩数量（布局口径）：桩 = 车位/2（取整）
     n_layout = stalls_total // 2

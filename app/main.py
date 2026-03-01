@@ -4,6 +4,13 @@ from fastapi.responses import FileResponse
 from docx import Document
 import tempfile
 
+
+import base64
+import io
+from docx.shared import Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+
 from app.schemas import CalcRequest
 from app.calc import calc_plan
 
@@ -118,6 +125,50 @@ def report_word(req: CalcRequest):
         # 章节结束空一行
         p = doc.add_paragraph("")
         p.paragraph_format.line_spacing = LINE_SPACING
+    
+    def append_layout_attachment(doc: Document, data: dict):
+        """
+        在文末追加：
+        附件：场站布局示意图（左对齐）
+        + 布局图 PNG
+        """
+        layout_png_data_url = (data.get("layout_png_data_url") or "").strip()
+        if not layout_png_data_url:
+            return  # 没有就不插入
+
+        layout_title = (data.get("layout_title") or "附件：场站布局示意图").strip()
+
+        # 1) 附件标题（左对齐，建议加粗宋体14）
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        run = p.add_run(layout_title)
+
+        # 复用你已有的字体函数（如果在作用域内）
+        try:
+            set_cn_font(run, size_pt=14, bold=True, font_name="宋体")
+            format_para(p, first_line_indent=False)
+        except Exception:
+            # 如果你未来移动代码导致 set_cn_font 不在作用域，就至少保证不崩
+            pass
+
+        # 2) dataURL -> bytes
+        # 格式：data:image/png;base64,xxxx
+        if "base64," in layout_png_data_url:
+            b64 = layout_png_data_url.split("base64,", 1)[1]
+        else:
+            b64 = layout_png_data_url
+
+        try:
+            img_bytes = base64.b64decode(b64)
+        except Exception:
+            # base64 不合法就直接跳过，避免导出失败
+            return
+
+        img_stream = io.BytesIO(img_bytes)
+
+        # 3) 插入图片（宽度可调：6.3~6.8 英寸通常适配 A4 竖版页面正文区域）
+        doc.add_picture(img_stream, width=Inches(6.5))
+
 
 
     # =========================
@@ -346,6 +397,9 @@ def report_word(req: CalcRequest):
 
     add_blank_line()
 
+
+    # ===== 文末附件：场站布局示意图 =====
+    append_layout_attachment(doc, data)
 
     # ===== 保存为临时文件并下载 =====
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")

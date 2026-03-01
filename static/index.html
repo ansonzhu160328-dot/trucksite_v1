@@ -460,6 +460,12 @@ th{
 
     <hr style="margin:8px 0 16px; border:none; border-top:1px solid #eee;">
 
+<h3>场站布局示意图</h3>
+<div id="layout"></div>
+<div id="layoutRemark" class="muted"></div>
+
+<hr style="margin:16px 0; border:none; border-top:1px solid #eee;">
+
 <h3>敏感性分析</h3>
 <div id="sensSummary" class="muted">尚未运行敏感性分析</div>
 
@@ -487,7 +493,7 @@ th{
 
 <h3>详细测算</h3>
 <pre id="out" class="muted" style="background:#fff; color:var(--text); border:1px solid var(--border);"></pre>
-<div id="layout"></div>
+
 
 </div>
 
@@ -566,7 +572,8 @@ th{
 
 
   async function runCalc() {
-    try {
+    const marginY = 20;
+    try {      
       const payload = buildPayload();
       const res = await fetch('/api/calculate', {
         method: 'POST',
@@ -578,6 +585,10 @@ th{
         const t = await res.text();
         $('out').innerText = "计算失败：" + t;
         $('layout').innerHTML = "";
+
+        const remarkEl = document.getElementById('layoutRemark');
+        if (remarkEl) remarkEl.innerText = "";
+
         return;
       }
 
@@ -592,7 +603,7 @@ th{
 
             // ===== 销售摘要四宫格 KPI =====
       $('kpiConfig').innerText = `${d.n_recommend ?? '—'} 台 400kW 一机双枪`;
-      $('kpiStalls').innerText = `车位：${d.stalls ?? '—'}（1桩2车位）`;
+      $('kpiStalls').innerText = `充电车位：${(Number(d.n_recommend ?? 0) * 2) || '—'}（桩数×2）`;
       const n = Number(d.n_recommend ?? 0);
       const powerKva = n * 400;
       $('kpiPower').innerText = `电力容量：${powerKva.toLocaleString('zh-CN')} kVA`;
@@ -639,275 +650,381 @@ th{
         d.notes.forEach(x => lines.push(" - " + x));
       }
 
-      const remark = "备注：如需详细的场站设计方案（CAD设计图）、产品配置方案及参数、请致电1*********。";
+      const remark = "备注：如需详细的场站设计方案（CAD设计图）、产品配置方案及参数、请联系13427615930。";
 
-        $('out').innerText = summary + "\n\n" + lines.join("\n") + "\n" + remark;
+        // 详细测算：只放测算文字，不再拼接备注
+        $('out').innerText = summary + "\n\n" + lines.join("\n");
+
+        // 备注：放到“场站布局示意图”区域左下角
+        const remarkEl = document.getElementById('layoutRemark');
+        if (remarkEl) remarkEl.innerText = remark;
+
         renderLayoutSVG(d);
 
     } catch (e) {
       console.error(e);
       $('out').innerText = "前端异常：" + (e?.message || e);
       $('layout').innerHTML = "";
+
+      const remarkEl = document.getElementById('layoutRemark');
+      if (remarkEl) remarkEl.innerText = "";
     }
 
-    // 第一排顶部外侧桩
-    const firstTopRowY = marginY + moduleGapPx;
-    drawPilesAtY(shapes, firstTopRowY - moduleGapPx + (moduleGapPx - pileH) / 2);
-    // 最后一排底部外侧桩
-    drawPilesAtY(shapes, lastRowBottomY + (moduleGapPx - pileH) / 2);
 
-    container.innerHTML = `<svg viewBox="0 0 ${totalW} ${totalH}" width="100%" height="${totalH}" xmlns="http://www.w3.org/2000/svg">
-      <text x="${marginX}" y="12" font-size="12" fill="#334155">多排简易布局（模块间距=${MODULE_GAP_M}m；通道=车位长度）</text>
-      ${shapes.join('')}
-    </svg>`;
+
+
   }
 
+  
   function renderLayoutSVG(data) {
     const container = $('layout');
     const rowCount = Number(data.row_count || 0);
-    const stallsRaw = Number(data.stalls_per_row_raw || 0);
-    const stallsDraw = Number(data.stalls_per_row_draw || 0);
 
-    if (!rowCount || !stallsDraw) {
+    // ✅ 真实每排车位总数：优先用 stalls_per_row_total（后端新增/将来新增）
+    // 若后端暂时没给，就退化使用 stalls_per_row_draw（保持兼容）
+    const stallsTotal = Number(data.stalls_per_row_total ?? data.stalls_per_row_draw ?? 0);
+
+    if (!rowCount || !stallsTotal) {
       container.innerHTML = '<div class="layout-empty">当前参数下无法生成简易布局图。</div>';
       return;
     }
 
-    const stallW = 28;
-    const stallH = 34;
-    const gap = 4;
-    const margin = 16;
-
-    if (rowCount === 1) {
-      const left = Number(data.stalls_left || 0);
-      const right = Number(data.stalls_right || 0);
-
-      if (left + right !== stallsDraw || left < 0 || right < 0) {
-        container.innerHTML = '<div class="layout-empty">单排拆分数据异常，无法绘图。</div>';
-        return;
-      }
-
-      const transformerW = 72;
-      const centerGap = 20;
-      const totalW = margin * 2 + left * (stallW + gap) + right * (stallW + gap) + transformerW + centerGap * 2;
-      const totalH = margin * 2 + stallH + 36;
-      let shapes = [];
-
-      const leftStartX = margin;
-      for (let i = 0; i < left; i++) {
-        const x = leftStartX + i * (stallW + gap);
-        shapes.push(`<rect x="${x}" y="${margin + 28}" width="${stallW}" height="${stallH}" fill="#dbeafe" stroke="#1e40af"/>`);
-      }
-
-      const tfX = leftStartX + left * (stallW + gap) + centerGap;
-      shapes.push(`<rect x="${tfX}" y="${margin + 22}" width="${transformerW}" height="${stallH + 12}" fill="#fde68a" stroke="#92400e"/>`);
-      shapes.push(`<text x="${tfX + transformerW / 2}" y="${margin + 47}" text-anchor="middle" font-size="12">变压器</text>`);
-
-      const rightStartX = tfX + transformerW + centerGap;
-      for (let i = 0; i < right; i++) {
-        const x = rightStartX + i * (stallW + gap);
-        shapes.push(`<rect x="${x}" y="${margin + 28}" width="${stallW}" height="${stallH}" fill="#dbeafe" stroke="#1e40af"/>`);
-      }
-
-      for (let i = 0; i < Math.floor(left / 2); i++) {
-        const x = leftStartX + i * 2 * (stallW + gap) + stallW - 4;
-        shapes.push(`<rect x="${x}" y="${margin + 8}" width="8" height="12" fill="#dc2626"/>`);
-      }
-      for (let i = 0; i < Math.floor(right / 2); i++) {
-        const x = rightStartX + i * 2 * (stallW + gap) + stallW - 4;
-        shapes.push(`<rect x="${x}" y="${margin + 8}" width="8" height="12" fill="#dc2626"/>`);
-      }
-
-      container.innerHTML = `<svg viewBox="0 0 ${totalW} ${totalH}" width="100%" height="${totalH}" xmlns="http://www.w3.org/2000/svg">
-        <text x="${margin}" y="14" font-size="12" fill="#334155">单排简易布局（左${left} + 右${right}）</text>
-        ${shapes.join('')}
-      </svg>`;
-      return;
-    }
-
-    const rowStalls = stallsRaw > 0 ? stallsRaw : stallsDraw;
-    const moduleH = stallH * 2 + 34;
-    const totalW = margin * 2 + rowStalls * (stallW + gap);
-    const totalH = margin * 2 + Math.ceil(rowCount / 2) * moduleH;
-    let shapes = [];
-
-    function drawRow(y, rowIdx) {
-      for (let i = 0; i < rowStalls; i++) {
-        const x = margin + i * (stallW + gap);
-        shapes.push(`<rect x="${x}" y="${y}" width="${stallW}" height="${stallH}" fill="#e2e8f0" stroke="#334155"/>`);
-      }
-      for (let p = 0; p < Math.floor(rowStalls / 2); p++) {
-        const x = margin + p * 2 * (stallW + gap) + stallW - 4;
-        shapes.push(`<rect x="${x}" y="${y - 14}" width="8" height="12" fill="#dc2626"/>`);
-      }
-      shapes.push(`<text x="${margin}" y="${y + stallH + 14}" font-size="11" fill="#475569">第${rowIdx + 1}排</text>`);
-    }
-
-    for (let m = 0; m < Math.ceil(rowCount / 2); m++) {
-      const topY = margin + m * moduleH;
-      const firstRow = m * 2;
-      drawRow(topY, firstRow);
-      if (firstRow + 1 < rowCount) {
-        drawRow(topY + stallH + 18, firstRow + 1);
-      }
-    }
-
-    container.innerHTML = `<svg viewBox="0 0 ${totalW} ${totalH}" width="100%" height="${totalH}" xmlns="http://www.w3.org/2000/svg">
-      <text x="${margin}" y="14" font-size="12" fill="#334155">多排简易布局（共${rowCount}排）</text>
-      ${shapes.join('')}
-    </svg>`;
-  }
-
-  function renderLayoutSVG(data) {
-    const container = $('layout');
-    const rowCount = Number(data.row_count || 0);
-    const stallsDraw = Number(data.stalls_per_row_draw || 0);
-
-    if (!rowCount || !stallsDraw) {
-      container.innerHTML = '<div class="layout-empty">当前参数下无法生成简易布局图。</div>';
-      return;
-    }
-
-    const STALL_WIDTH_M = 6;
+    // ====== 基本尺寸 ======
+    const STALL_WIDTH_M = 4;
     const STALL_LEN_M = 15;
     const scale = 5;
+
     const stallW = STALL_WIDTH_M * scale;
     const stallL = STALL_LEN_M * scale;
-    const lane = stallL;
+    const lane = stallL;              // 行车道高度（先沿用你当前口径）
+    const gapY = 12;                  // 每排/模块之间额外留白（可再调）
+    
 
     const margin = 20;
-    const pileW = Math.max(8, Math.round(stallW * 0.16));
-    const pileH = Math.max(14, Math.round(stallL * 0.2));
+    const titleH = 16;
+
+    // 桩：你要“短一半”，这里直接控制为更扁
+    const pileW = 4;                  // 你想写死就写死，没问题
+    const pileH = 4;                  // 你想写死就写死，没问题
+    const bbGap = pileH + 2;   // 背靠背两排间距：≈一个桩的距离（你可微调 4~10）
+
+    // 变压器尺寸（保留按比例）
     const txW = Math.max(58, Math.round(stallW * 1.6));
     const txH = Math.max(22, Math.round(stallL * 0.34));
 
-    const drawStalls = (shapes, y, stallsCount, fill, stroke) => {
-      for (let i = 0; i < stallsCount; i++) {
+    // 变压器占位（做成“全局变量”，以后你改成4/5都方便）
+    const TX_SLOTS = Number(data.tx_slots_per_row || 2); // 后端没有就默认2
+
+    // 计算左右车位：
+    // preferEvenSides=true  → 外侧排：优先让 left/right 都为偶数，避免“落单白格”
+    // preferEvenSides=false → 背靠背排：保持居中即可（odd 也可用）
+    function calcLeftRight(totalStalls, txSlots, preferEvenSides = false) {
+      const remain = Math.max(0, totalStalls - txSlots);
+
+      let left = Math.floor(remain / 2);
+      let right = remain - left;
+
+      // ✅ 外侧排：尽量让左右都是偶数（两车位一桩才不会浪费）
+      if (preferEvenSides) {
+        // remain 为偶数时一定能做到左右同为偶数：把 left 调到最近的偶数即可
+        if (remain % 2 === 0 && (left % 2 === 1)) {
+          left = Math.max(0, left - 1);
+          right = remain - left;
+        }
+      }
+
+      const oddLeft = (left % 2 === 1);
+      const oddRight = (right % 2 === 1);
+
+      return { left, right, txSlots, oddLeft, oddRight };
+    }
+
+    // ====== 画车位：左车位 + 中间变压器占位(空白两格合并) + 右车位 ======
+    function drawRowStallsWithTransformer(shapes, rowY, fill, stroke, left, right, txSlots, oddLeft, oddRight, oddAsWhite = true) {
+      // 左侧车位：oddAsWhite=true 才把 oddLeft 的最左边画白
+      for (let i = 0; i < left; i++) {
         const x = margin + i * stallW;
-        shapes.push(`<rect x="${x}" y="${y}" width="${stallW}" height="${stallL}" fill="${fill}" stroke="${stroke}"/>`);
+        const isOddSingle = oddAsWhite && oddLeft && i === 0;
+        shapes.push(`<rect x="${x}" y="${rowY}" width="${stallW}" height="${stallL}" fill="${isOddSingle ? '#ffffff' : fill}" stroke="${stroke}"/>`);
       }
-    };
 
-    const drawTransformer = (shapes, y) => {
-      const txX = margin + (stallsDraw * stallW) / 2 - txW / 2;
-      const txY = y + stallL / 2 - txH / 2;
-      shapes.push(`<rect x="${txX}" y="${txY}" width="${txW}" height="${txH}" fill="#fde68a" stroke="#92400e"/>`);
-      shapes.push(`<text x="${txX + txW / 2}" y="${txY + txH / 2 + 4}" text-anchor="middle" font-size="12">变压器</text>`);
-    };
+      // 变压器占位
+      const txSlotX = margin + left * stallW;
+      const txSlotW = txSlots * stallW;
+      shapes.push(`<rect x="${txSlotX}" y="${rowY}" width="${txSlotW}" height="${stallL}" fill="#fde68a" stroke="${stroke}"/>`);
 
-    const drawPilesBy2Stalls = (shapes, yTop) => {
-      const pileCount = Math.floor(stallsDraw / 2);
-      for (let p = 0; p < pileCount; p++) {
-        const xMid = margin + (p * 2 + 1) * stallW;
-        shapes.push(`<rect x="${xMid - pileW / 2}" y="${yTop}" width="${pileW}" height="${pileH}" fill="#dc2626"/>`);
+      // 右侧车位：oddAsWhite=true 才把 oddRight 的最右边画白
+      for (let i = 0; i < right; i++) {
+        const x = margin + (left + txSlots + i) * stallW;
+        const isOddSingle = oddAsWhite && oddRight && i === right - 1;
+        shapes.push(`<rect x="${x}" y="${rowY}" width="${stallW}" height="${stallL}" fill="${isOddSingle ? '#ffffff' : fill}" stroke="${stroke}"/>`);
       }
-    };
+    }
 
-    // 单排：按后端拆分结果绘制左右 + 中间变压器
+    function drawTransformerBox(shapes, rowY, left, txSlots) {
+      const txSlotX = margin + left * stallW;
+      const txSlotW = txSlots * stallW;
+
+      const cx = txSlotX + txSlotW / 2;
+      const cy = rowY + stallL / 2;
+
+      shapes.push(`
+        <text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="12" fill="#92400e">
+          <tspan x="${cx}" dy="0">变压器</tspan>
+          <tspan x="${cx}" dy="14">区域</tspan>
+        </text>
+      `);
+    }
+
+    // ====== 外侧桩：横向一对二（左右两侧各自两车位一桩，跳过中间变压器占位） ======
+    function drawPilesOuterHorizontal(shapes, rowY, side, left, right, txSlots, oddLeft, oddRight) {
+      const y = (side === 'top') ? (rowY - pileH - 2) : (rowY + stallL + 2);
+
+      // 左侧：oddLeft => i=0 是落单位，跳过，从 i=1 开始两两配
+      const leftStart = oddLeft ? 1 : 0;
+      const leftPairs = Math.floor((left - leftStart) / 2);
+      for (let p = 0; p < leftPairs; p++) {
+        const iMid = leftStart + p * 2 + 1; // 两车位中心列索引
+        const xMid = margin + iMid * stallW;
+        shapes.push(`<rect x="${xMid - pileW / 2}" y="${y}" width="${pileW}" height="${pileH}" fill="#dc2626"/>`);
+      }
+
+      // 右侧：oddRight => 最右侧落单位保留不配桩，所以 usable = right-1
+      const rightUsable = oddRight ? (right - 1) : right;
+      const rightPairs = Math.floor(rightUsable / 2);
+      for (let p = 0; p < rightPairs; p++) {
+        const iMidInRight = p * 2 + 1; // 右侧内部索引
+        const xMid = margin + (left + txSlots + iMidInRight) * stallW;
+        shapes.push(`<rect x="${xMid - pileW / 2}" y="${y}" width="${pileW}" height="${pileH}" fill="#dc2626"/>`);
+      }
+    }
+
+    // ====== 背靠背桩：纵向一对二（每一列一个桩，跳过中间变压器占位那几列） ======
+    function drawPilesBetweenRowsVertical(shapes, boundaryY, left, right, txSlots, oddLeft, oddRight, skipOddColumns = true) {
+      const y = boundaryY - pileH / 2 + 3;
+
+      const total = left + txSlots + right;
+      for (let i = 0; i < total; i++) {
+        // 跳过变压器占位列
+        if (i >= left && i < left + txSlots) continue;
+
+        // ✅ 只有在“外侧落单不可用”的模式下才跳过 odd 列
+        if (skipOddColumns) {
+          if (oddLeft && i === 0) continue;
+          if (oddRight && i === total - 1) continue;
+        }
+
+        const xMid = margin + i * stallW + stallW / 2;
+        shapes.push(`<rect x="${xMid - pileW / 2}" y="${y}" width="${pileW}" height="${pileH}" fill="#dc2626"/>`);
+      }
+    }
+
+    // ====== “第N排”竖排显示（你已做过，这里保底一份） ======
+    function drawRowLabel(shapes, rowNo, rowY) {
+      shapes.push(`
+        <text x="${margin - 10}" y="${rowY + 18}" font-size="11" fill="#475569" text-anchor="middle">
+          <tspan x="${margin - 10}" dy="0">第</tspan>
+          <tspan x="${margin - 10}" dy="12">${rowNo}</tspan>
+          <tspan x="${margin - 10}" dy="12">排</tspan>
+        </text>
+      `);
+    }
+
+    // ====== 开始绘制 ======
+    const totalW = margin * 2 + stallsTotal * stallW;
+    const shapes = [];
+    
+
+    let y = margin + titleH;
+
+    // 单排：严格用后端 left/right（你已经调通的口径）
     if (rowCount === 1) {
       const left = Number(data.stalls_left || 0);
       const right = Number(data.stalls_right || 0);
-      if (left + right !== stallsDraw || left < 0 || right < 0) {
+      const txSlots = TX_SLOTS;
+
+      // 校验：left + tx + right == stallsTotal
+      if (left < 0 || right < 0 || left + txSlots + right !== stallsTotal) {
         container.innerHTML = '<div class="layout-empty">单排拆分数据异常，无法绘图。</div>';
         return;
       }
 
-      const topY = margin + pileH + 12;
-      const totalW = margin * 2 + stallsDraw * stallW;
-      const totalH = topY + stallL + margin;
-      const shapes = [];
+      const rowY = y + pileH + 10;
 
-      // 左右两侧车位（保持后端拆分口径）
-      for (let i = 0; i < left; i++) {
-        const x = margin + i * stallW;
-        shapes.push(`<rect x="${x}" y="${topY}" width="${stallW}" height="${stallL}" fill="#dbeafe" stroke="#1e40af"/>`);
-      }
-      for (let i = 0; i < right; i++) {
-        const x = margin + (left + i) * stallW;
-        shapes.push(`<rect x="${x}" y="${topY}" width="${stallW}" height="${stallL}" fill="#dbeafe" stroke="#1e40af"/>`);
-      }
+      const oddLeft = (left % 2 === 1);
+      const oddRight = (right % 2 === 1);
 
-      // 单排桩：每2车位一桩，位于车位前方（靠电缆沟）
-      drawPilesBy2Stalls(shapes, margin + 4);
+      drawRowStallsWithTransformer(shapes, rowY, '#dbeafe', '#1e40af', left, right, txSlots, oddLeft, oddRight);
+      drawTransformerBox(shapes, rowY, left, txSlots);
 
-      // 变压器位于左右中间
-      const txX = margin + left * stallW - txW / 2;
-      const txY = topY + stallL / 2 - txH / 2;
-      shapes.push(`<rect x="${txX}" y="${txY}" width="${txW}" height="${txH}" fill="#fde68a" stroke="#92400e"/>`);
-      shapes.push(`<text x="${txX + txW / 2}" y="${txY + txH / 2 + 4}" text-anchor="middle" font-size="12">变压器</text>`);
+      // 单排外侧桩：放车位外侧（你要的“横向一对二”）
+      drawPilesOuterHorizontal(shapes, rowY, 'top', left, right, txSlots, oddLeft, oddRight);
 
-      container.innerHTML = `<svg viewBox="0 0 ${totalW} ${totalH}" width="100%" height="${totalH}" xmlns="http://www.w3.org/2000/svg">
-        <text x="${margin}" y="14" font-size="12" fill="#334155">单排简易布局（左${left}+右${right}；通道=车位长度）</text>
-        ${shapes.join('')}
-      </svg>`;
+      drawRowLabel(shapes, 1, rowY);
+
+      const totalH = rowY + stallL + margin;
+      container.innerHTML = `<svg viewBox="0 0 ${totalW} ${totalH}" width="100%" height="${totalH}" xmlns="http://www.w3.org/2000/svg">${shapes.join('')}</svg>`;
       return;
     }
 
-    // 多排：2排一个背靠背模块；模块间留 lane；奇数最后一排单排模块
-    const modulePairH = stallL + lane + stallL;
-    const moduleSingleH = stallL;
-    const moduleGap = lane;
+    // ===== 多排规则（按你确认的要求）=====
+    // 1) 第1排：外侧横向一对二（top）
+    // 2) 第2排起：2-3、4-5...成对背靠背（纵向一对二）
+    // 3) 如果最后落单：外侧横向一对二（bottom）
 
-    const fullPairs = Math.floor(rowCount / 2);
-    const hasLastSingle = rowCount % 2 === 1;
-    const totalModulesHeight = fullPairs * modulePairH + (hasLastSingle ? moduleSingleH : 0) + Math.max(0, fullPairs + (hasLastSingle ? 1 : 0) - 1) * moduleGap;
+    // 先画第1排
+    {
+      const split = calcLeftRight(stallsTotal, TX_SLOTS, true); // ✅ 外侧排：preferEvenSides=true
+      const rowY = y + pileH + 10;
 
-    const totalW = margin * 2 + stallsDraw * stallW;
-    const totalH = margin * 2 + totalModulesHeight;
-    const shapes = [];
+      drawRowStallsWithTransformer(shapes, rowY, '#e2e8f0', '#334155', split.left, split.right, split.txSlots, split.oddLeft, split.oddRight);
+      drawTransformerBox(shapes, rowY, split.left, split.txSlots);
+      drawPilesOuterHorizontal(shapes, rowY, 'top', split.left, split.right, split.txSlots, split.oddLeft, split.oddRight);
 
-    let cursorY = margin;
-    let rowIdx = 0;
+      drawRowLabel(shapes, 1, rowY);
 
-    for (let m = 0; m < fullPairs; m++) {
-      const topRowY = cursorY;
-      const laneY = topRowY + stallL;
-      const bottomRowY = laneY + lane;
+      // ✅ 第1排与第2排之间：一定要画行车道（只要 rowCount >= 2）
+      if (rowCount >= 2) {
+        const roadY = rowY + stallL;
+        shapes.push(`<rect x="${margin}" y="${roadY}" width="${stallsTotal * stallW}" height="${lane}" fill="#f8fafc" stroke="#cbd5e1"/>`);
 
-      // 上下排车位
-      drawStalls(shapes, topRowY, stallsDraw, '#e2e8f0', '#334155');
-      drawStalls(shapes, bottomRowY, stallsDraw, '#e2e8f0', '#334155');
+        const roadTextX = margin + (stallsTotal * stallW) / 2;
+        const roadTextY = roadY + lane / 2;
+        shapes.push(`<text x="${roadTextX}" y="${roadTextY - 6}" text-anchor="middle" font-size="12" fill="#64748b">行车道</text>`);
+        shapes.push(`<line x1="${roadTextX - 30}" y1="${roadTextY + 6}" x2="${roadTextX + 30}" y2="${roadTextY + 6}" stroke="#94a3b8" stroke-width="2"/>`);
+        shapes.push(`<polygon points="${roadTextX + 30},${roadTextY + 6} ${roadTextX + 22},${roadTextY + 2} ${roadTextX + 22},${roadTextY + 10}" fill="#94a3b8"/>`);
+      }
+      // 下一排起点（走完行车道再下移）
+      y = rowY + stallL + lane + gapY;
+    }
 
-      // 中间通道
-      shapes.push(`<rect x="${margin}" y="${laneY}" width="${stallsDraw * stallW}" height="${lane}" fill="#f8fafc" stroke="#cbd5e1"/>`);
+    let rowNo = 2;
 
-      // 背靠背桩：每2车位宽一台，布置在中间通道靠中线
-      const pileCount = Math.floor(stallsDraw / 2);
-      for (let p = 0; p < pileCount; p++) {
-        const xMid = margin + (p * 2 + 1) * stallW;
-        const yMid = laneY + lane / 2 - pileH / 2;
-        shapes.push(`<rect x="${xMid - pileW / 2}" y="${yMid}" width="${pileW}" height="${pileH}" fill="#dc2626"/>`);
+    while (rowNo <= rowCount) {
+      
+      // 如果落单（最后一排）
+      if (rowNo === rowCount) {
+        const split = calcLeftRight(stallsTotal, TX_SLOTS, true); // ✅ 外侧排
+        const rowY = y;
+
+        drawRowStallsWithTransformer(shapes, rowY, '#e2e8f0', '#334155', split.left, split.right, split.txSlots, split.oddLeft, split.oddRight);
+        drawTransformerBox(shapes, rowY, split.left, split.txSlots);
+
+        // 最后一排外侧桩：bottom（车位外侧）
+        drawPilesOuterHorizontal(shapes, rowY, 'bottom', split.left, split.right, split.txSlots, split.oddLeft, split.oddRight);
+
+        drawRowLabel(shapes, rowNo, rowY);
+
+        y = rowY + stallL + gapY;
+        break;
       }
 
-      // 每排都显示变压器（x一致）
-      drawTransformer(shapes, topRowY);
-      drawTransformer(shapes, bottomRowY);
+      const split = calcLeftRight(stallsTotal, TX_SLOTS, false); // ✅ 背靠背：居中即可
+      // 成对背靠背：rowNo 与 rowNo+1
+      const topY = y;
+      const boundaryY = topY + stallL;
+      const bottomY = boundaryY + bbGap;   // ✅ 背靠背只留一个桩的距离
 
-      shapes.push(`<text x="${margin}" y="${topRowY - 4}" font-size="11" fill="#475569">第${rowIdx + 1}排</text>`);
-      shapes.push(`<text x="${margin}" y="${bottomRowY - 4}" font-size="11" fill="#475569">第${rowIdx + 2}排</text>`);
+      // 上排车位（背靠背：odd 也可用，所以不画白格）
+      drawRowStallsWithTransformer(
+        shapes, topY, '#e2e8f0', '#334155',
+        split.left, split.right, split.txSlots,
+        split.oddLeft, split.oddRight,
+        false
+      );
+      drawTransformerBox(shapes, topY, split.left, split.txSlots);
+      drawRowLabel(shapes, rowNo, topY);
 
-      rowIdx += 2;
-      cursorY += modulePairH + moduleGap;
+      // 下排车位（背靠背：odd 也可用，所以不画白格）
+      drawRowStallsWithTransformer(
+        shapes, bottomY, '#e2e8f0', '#334155',
+        split.left, split.right, split.txSlots,
+        split.oddLeft, split.oddRight,
+        false
+      );
+      drawTransformerBox(shapes, bottomY, split.left, split.txSlots);
+      drawRowLabel(shapes, rowNo + 1, bottomY);
+
+      // 背靠背桩：odd 列也要布桩，所以 skipOddColumns=false
+      drawPilesBetweenRowsVertical(
+        shapes, boundaryY,
+        split.left, split.right, split.txSlots,
+        split.oddLeft, split.oddRight,
+        false
+      );
+
+      // ====== 只在“该画行车道的地方”画行车道 ======
+      // 当前背靠背模块画完后，下一组的起点（先不加 lane）
+      let nextY = bottomY + stallL + gapY;
+
+      // 如果后面还有车位排（rowNo+2 还没到最后），则在模块与模块之间画行车道并加上 lane
+      if (rowNo + 2 <= rowCount) {
+        const roadY = bottomY + stallL; // 模块底边紧贴处开始画行车道
+
+        shapes.push(`<rect x="${margin}" y="${roadY}" width="${stallsTotal * stallW}" height="${lane}" fill="#f8fafc" stroke="#cbd5e1"/>`);
+
+        const roadTextX = margin + (stallsTotal * stallW) / 2;
+        const roadTextY = roadY + lane / 2;
+        shapes.push(`<text x="${roadTextX}" y="${roadTextY - 6}" text-anchor="middle" font-size="12" fill="#64748b">行车道</text>`);
+        shapes.push(`<line x1="${roadTextX - 30}" y1="${roadTextY + 6}" x2="${roadTextX + 30}" y2="${roadTextY + 6}" stroke="#94a3b8" stroke-width="2"/>`);
+        shapes.push(`<polygon points="${roadTextX + 30},${roadTextY + 6} ${roadTextX + 22},${roadTextY + 2} ${roadTextX + 22},${roadTextY + 10}" fill="#94a3b8"/>`);
+
+        // 有行车道时，下一组整体下移 lane
+        nextY += lane;
+      }
+
+      // 下一组
+      y = nextY;
+      rowNo += 2;
+
     }
 
-    if (hasLastSingle) {
-      const y = cursorY;
-      drawStalls(shapes, y, stallsDraw, '#e2e8f0', '#334155');
-      drawPilesBy2Stalls(shapes, y - pileH - 4);
-      drawTransformer(shapes, y);
-      shapes.push(`<text x="${margin}" y="${y - 4}" font-size="11" fill="#475569">第${rowIdx + 1}排</text>`);
-    }
-
-    container.innerHTML = `<svg viewBox="0 0 ${totalW} ${totalH}" width="100%" height="${totalH}" xmlns="http://www.w3.org/2000/svg">
-      <text x="${margin}" y="14" font-size="12" fill="#334155">多排简易布局（背靠背模块+模块间通道，通道=车位长度）</text>
-      ${shapes.join('')}
-    </svg>`;
+    const totalH = y + margin;
+    container.innerHTML = `<svg viewBox="0 0 ${totalW} ${totalH}" width="100%" height="${totalH}" xmlns="http://www.w3.org/2000/svg">${shapes.join('')}</svg>`;
   }
 
+
+  async function svgElementToPngDataUrl(svgEl, scale = 2) {
+    if (!svgEl) return null;
+
+    const svgText = new XMLSerializer().serializeToString(svgEl);
+    const svgBlob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    try {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = url;
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      const w = Math.max(1, Math.floor(img.width * scale));
+      const h = Math.max(1, Math.floor(img.height * scale));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+
+      return canvas.toDataURL("image/png");
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
 
   async function exportWord() {
     try {
       const payload = buildPayload();
+
+      // ✅ 追加：把“场站布局示意图”作为附件传给后端
+      payload.layout_title = "附件：场站布局示意图";
+      const svgEl = document.querySelector('#layout svg');
+      payload.layout_png_data_url = await svgElementToPngDataUrl(svgEl, 2);
 
       const res = await fetch('/api/report_word', {
         method: 'POST',
