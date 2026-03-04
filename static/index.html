@@ -1103,38 +1103,49 @@ th{
     }
   }
 
-  async function exportWord(payload) {
-    try {
-      if (payload.attachments_selected.includes('layout')) {
-        payload.layout_title = "附件：场站布局示意图";
-        const svgEl = document.querySelector('#layout svg');
-        payload.layout_png_data_url = await svgElementToPngDataUrl(svgEl, 2);
+  async function exportFile(endpoint, filename, payload) {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      let errText = '';
+      try {
+        const data = await res.json();
+        errText = String(data?.detail || data?.message || '').trim();
+      } catch (_) {
+        errText = (await res.text()).trim();
       }
 
-      const res = await fetch('/api/report_word', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        const t = await res.text();
-        alert("导出失败：" + t);
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = "重卡充电站初步设计方案.docx";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (e) {
-      alert("导出异常：" + e.message);
+      const msg = errText || `HTTP ${res.status}`;
+      throw new Error(msg);
     }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
+  async function exportWord(payload) {
+    if (payload.attachments_selected.includes('layout')) {
+      payload.layout_title = "附件：场站布局示意图";
+      const svgEl = document.querySelector('#layout svg');
+      payload.layout_png_data_url = await svgElementToPngDataUrl(svgEl, 2);
+    }
+
+    await exportFile('/api/report_word', '重卡充电站初步设计方案.docx', payload);
+  }
+
+  async function exportPdf(payload) {
+    await exportFile('/api/report_pdf', '重卡充电站初步设计方案.pdf', payload);
   }
 
 
@@ -1330,16 +1341,21 @@ th{
     console.log('[Export] attachments_selected=' + JSON.stringify(attachments_selected));
     console.log('[Export] payload.attachments_selected exists? ' + Object.prototype.hasOwnProperty.call(payload, 'attachments_selected'));
 
-    if (export_format === 'pdf') {
-      closeExportFlow();
-      alert('PDF功能开发中');
-      return;
-    }
-
     isExporting = true;
     closeExportFlow();
     try {
-      await exportWord(payload);
+      if (export_format === 'pdf') {
+        await exportPdf(payload);
+      } else {
+        await exportWord(payload);
+      }
+    } catch (e) {
+      const msg = String(e?.message || e || '未知错误');
+      if (msg.includes('LibreOffice/soffice 未安装')) {
+        alert('服务器未安装 LibreOffice，PDF 暂不可用。请先安装 LibreOffice。');
+      } else {
+        alert('导出失败：' + msg);
+      }
     } finally {
       isExporting = false;
     }
