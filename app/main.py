@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 import base64
+from datetime import datetime
 from docx.shared import Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
@@ -60,25 +61,13 @@ async def report_word(request: Request):
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.ns import qn
 
-    # ===== 标题 =====
+    # ===== 封皮标题 =====
     site_location = data.get("site_location", "").strip()
 
     if not site_location:
         site_location = "未填写场站位置"
 
     title_text = f"{site_location}重卡充电站初步设计方案"
-
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-    run = p.add_run(title_text)
-    run.font.name = "宋体"
-    run._element.rPr.rFonts.set(qn('w:eastAsia'), "宋体")
-    run.font.size = Pt(22)   # 二号 = 22pt
-    run.bold = True
-
-    # 标题下空一行
-    doc.add_paragraph("")
 
     from docx.shared import Pt
     from docx.oxml.ns import qn
@@ -114,6 +103,13 @@ async def report_word(request: Request):
         p.paragraph_format.line_spacing = LINE_SPACING
         if first_line_indent:
             p.paragraph_format.first_line_indent = INDENT_2CH
+
+    def add_cover_line(text, size_pt=14, bold=False, align_center=True):
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER if align_center else WD_ALIGN_PARAGRAPH.LEFT
+        run = p.add_run(text)
+        set_cn_font(run, size_pt=size_pt, bold=bold, font_name="宋体")
+        format_para(p, first_line_indent=False)
 
     def add_title(text):
         # 一级标题：宋体14pt加粗，不缩进，1.5倍行距
@@ -250,6 +246,18 @@ async def report_word(request: Request):
         for line in [x.strip() for x in text.splitlines() if x.strip()]:
             add_body(line)
 
+
+    # =========================
+    # 封皮页（第1页）
+    # =========================
+    add_cover_line(title_text, size_pt=22, bold=True, align_center=True)
+    doc.add_paragraph("")
+    doc.add_paragraph("")
+    add_cover_line("编制单位：广东盈通智联数字技术有限公司", size_pt=14, bold=False, align_center=True)
+    add_cover_line(f"编制日期：{datetime.now().strftime('%Y年%m月%d日')}", size_pt=14, bold=False, align_center=True)
+
+    # 分页：正文从第2页开始
+    doc.add_page_break()
 
 
     # =========================
