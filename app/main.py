@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from docx import Document
@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 
 import base64
+import shutil
+import subprocess
 from datetime import datetime
 from docx.shared import Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -43,15 +45,9 @@ def calculate(req: CalcRequest):
     return result
 
 
-@app.post("/api/report_word")
-async def report_word(request: Request):
-    raw_data = await request.json()
-    if not isinstance(raw_data, dict):
-        raw_data = {}
-
+def build_report_doc(raw_data: dict) -> Document:
     req = CalcRequest.model_validate(raw_data)
     data = req.model_dump()
-    print("DEBUG /api/report_word keys:", sorted(list(raw_data.keys())))
     result = calc_plan(data)
 
     # ===== 生成 Word =====
@@ -593,13 +589,79 @@ async def report_word(request: Request):
     if "finance" in attachments_selected:
         append_finance_attachment()
 
-    # ===== 保存为临时文件并下载 =====
+    return doc
+
+
+@app.post("/api/report_word")
+async def report_word(request: Request):
+    raw_data = await request.json()
+    if not isinstance(raw_data, dict):
+        raw_data = {}
+
+    print("DEBUG /api/report_word keys:", sorted(list(raw_data.keys())))
+    doc = build_report_doc(raw_data)
+
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")
     doc.save(tmp.name)
     tmp.close()
 
     return FileResponse(
         tmp.name,
-        filename="trucksite_preliminary_design.docx",  # 用 ASCII 文件名，避免 Windows/Header 坑
+        filename="trucksite_preliminary_design.docx",
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
+@app.post("/api/report_pdf")
+async def report_pdf(req: CalcRequest, request: Request):
+    data = req.model_dump()
+
+    raw_data = await request.json()
+    if not isinstance(raw_data, dict):
+        raw_data = {}
+
+    merged_data = dict(data)
+    merged_data.update(raw_data)
+
+    print("DEBUG /api/report_pdf keys:", sorted(list(merged_data.keys())))
+    doc = build_report_doc(merged_data)
+
+    # 依赖 LibreOffice（soffice）进行 headless 转换：
+    # Ubuntu 安装：
+    #   sudo apt update
+    #   sudo apt install -y libreoffice
+    #   soffice --version
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        docx_path = tmpdir_path / "report.docx"
+        pdf_path = tmpdir_path / "report.pdf"
+        doc.save(str(docx_path))
+
+        cmd = [
+            "soffice", "--headless", "--nologo", "--nofirststartwizard",
+            "--convert-to", "pdf", "--outdir", str(tmpdir_path), str(docx_path)
+        ]
+
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        except FileNotFoundError:
+            raise HTTPException(status_code=500, detail="LibreOffice/soffice 未安装")
+
+        if proc.returncode != 0:
+            err = ((proc.stderr or proc.stdout or "soffice convert failed")[:1000]).strip()
+            raise HTTPException(status_code=500, detail=f"PDF转换失败: {err}")
+
+        if not pdf_path.exists() or pdf_path.stat().st_size <= 0:
+            raise HTTPException(status_code=500, detail="PDF转换失败: 输出文件不存在或为空")
+
+        # 方案2：先在临时目录转换，再拷贝到 delete=False 临时文件返回
+        # 这样 TemporaryDirectory 可安全清理，同时 FileResponse 仍有稳定文件可读
+        out_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        out_pdf.close()
+        shutil.copyfile(str(pdf_path), out_pdf.name)
+
+    return FileResponse(
+        out_pdf.name,
+        filename="trucksite_preliminary_design.pdf",
+        media_type="application/pdf",
     )
