@@ -315,6 +315,51 @@ th{
 .topbar .title{
   color: rgba(255,255,255,.95);
 }
+
+.modal-mask{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,0.45);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:99;
+}
+
+.modal-mask.show{ display:flex; }
+
+.modal{
+  width:min(520px, calc(100vw - 32px));
+  background:#fff;
+  border-radius:10px;
+  border:1px solid rgba(15,23,42,0.12);
+  box-shadow:0 16px 36px rgba(15,23,42,0.24);
+  overflow:hidden;
+}
+
+.modal h4{
+  margin:0;
+  padding:14px 16px;
+  font-size:16px;
+  border-bottom:1px solid rgba(15,23,42,0.08);
+}
+
+.modal-body{ padding:14px 16px; }
+
+.modal-option{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 0;
+}
+
+.modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  padding:12px 16px 16px;
+  border-top:1px solid rgba(15,23,42,0.08);
+}
 </style>
 
 </head>
@@ -504,11 +549,52 @@ th{
     </div>
   </div>
 
+  <div id="modalExportDesign" class="modal-mask" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalExportDesignTitle">
+      <h4 id="modalExportDesignTitle">导出初步设计</h4>
+      <div class="modal-body">
+        <label class="modal-option"><input id="attachLayout" type="checkbox" checked> 附件1：场站布局示意图</label>
+        <label class="modal-option"><input id="attachCases" type="checkbox" checked> 附件2：产品及典型案例</label>
+        <label class="modal-option"><input id="attachFinance" type="checkbox"> 附件3：金融合作方案</label>
+      </div>
+      <div class="modal-actions">
+        <button id="btnModalCancelA" type="button" class="btn-ghost">取消</button>
+        <button id="btnModalNext" type="button" class="btn-primary">下一步</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalExportFormat" class="modal-mask" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalExportFormatTitle">
+      <h4 id="modalExportFormatTitle">导出格式</h4>
+      <div class="modal-body">
+        <label class="modal-option"><input id="formatWord" type="radio" name="exportFormat" value="word" checked> Word</label>
+        <label class="modal-option"><input id="formatPdf" type="radio" name="exportFormat" value="pdf"> PDF</label>
+      </div>
+      <div class="modal-actions">
+        <button id="btnModalPrev" type="button" class="btn-ghost">上一步</button>
+        <button id="btnModalCancelB" type="button" class="btn-ghost">取消</button>
+        <button id="btnModalExport" type="button" class="btn-primary">导出</button>
+      </div>
+    </div>
+  </div>
+
 <script>
   const $ = (id) => document.getElementById(id);
 
   function money(x) { return (Math.round(x)).toLocaleString('zh-CN') + " 元"; }
   function num(x) { return (Math.round(x * 100) / 100).toLocaleString('zh-CN'); }
+
+  const exportState = {
+    attachments: {
+      layout: true,
+      product: true,
+      finance: false,
+    },
+    format: 'word'
+  };
+
+  let isExporting = false;
 
   function resetDefaults() {
     if ($('loc')) $('loc').value = "";
@@ -1017,14 +1103,13 @@ th{
     }
   }
 
-  async function exportWord() {
+  async function exportWord(payload) {
     try {
-      const payload = buildPayload();
-
-      // ✅ 追加：把“场站布局示意图”作为附件传给后端
-      payload.layout_title = "附件：场站布局示意图";
-      const svgEl = document.querySelector('#layout svg');
-      payload.layout_png_data_url = await svgElementToPngDataUrl(svgEl, 2);
+      if (payload.attachments_selected.includes('layout')) {
+        payload.layout_title = "附件：场站布局示意图";
+        const svgEl = document.querySelector('#layout svg');
+        payload.layout_png_data_url = await svgElementToPngDataUrl(svgEl, 2);
+      }
 
       const res = await fetch('/api/report_word', {
         method: 'POST',
@@ -1187,15 +1272,108 @@ th{
     }
   }
 
+  function showModal(id) {
+    const modal = $(id);
+    if (!modal) return;
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function hideModal(id) {
+    const modal = $(id);
+    if (!modal) return;
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function openExportFlowStepA() {
+    hideModal('modalExportFormat');
+    showModal('modalExportDesign');
+  }
+
+  function openExportFlowStepB() {
+    hideModal('modalExportDesign');
+    showModal('modalExportFormat');
+  }
+
+  function closeExportFlow() {
+    hideModal('modalExportDesign');
+    hideModal('modalExportFormat');
+  }
+
+  function syncExportStateFromUI() {
+    exportState.attachments.layout = !!$('attachLayout')?.checked;
+    exportState.attachments.product = !!$('attachCases')?.checked;
+    exportState.attachments.finance = !!$('attachFinance')?.checked;
+    exportState.format = $('formatPdf')?.checked ? 'pdf' : 'word';
+  }
+
+  function getAttachmentsSelected() {
+    const list = [];
+    if (exportState.attachments.layout) list.push('layout');
+    if (exportState.attachments.product) list.push('product');
+    if (exportState.attachments.finance) list.push('finance');
+    return list;
+  }
+
+  async function handleExportSubmit() {
+    if (isExporting) return;
+
+    syncExportStateFromUI();
+    const attachments_selected = getAttachmentsSelected();
+    const export_format = exportState.format;
+    const payload = buildPayload();
+    payload.attachments_selected = attachments_selected;
+    payload.export_format = export_format;
+
+    console.log(`[Export] format=${export_format}`);
+    console.log('[Export] attachments_selected=' + JSON.stringify(attachments_selected));
+    console.log('[Export] payload.attachments_selected exists? ' + Object.prototype.hasOwnProperty.call(payload, 'attachments_selected'));
+
+    if (export_format === 'pdf') {
+      closeExportFlow();
+      alert('PDF功能开发中');
+      return;
+    }
+
+    isExporting = true;
+    closeExportFlow();
+    try {
+      await exportWord(payload);
+    } finally {
+      isExporting = false;
+    }
+  }
+
 
 
   // 绑定事件：彻底避免 onclick / 作用域 / 缓存等坑
   window.addEventListener('DOMContentLoaded', () => {
     $('btnReset').addEventListener('click', resetDefaults);
     $('btnCalc').addEventListener('click', runCalc);
-    $('btnWord').addEventListener('click', exportWord);
+    $('btnWord').addEventListener('click', openExportFlowStepA);
     
     $('btnSens').addEventListener('click', runSensitivity);
+
+    $('btnModalCancelA').addEventListener('click', closeExportFlow);
+    $('btnModalNext').addEventListener('click', openExportFlowStepB);
+    $('btnModalPrev').addEventListener('click', openExportFlowStepA);
+    $('btnModalCancelB').addEventListener('click', closeExportFlow);
+    $('btnModalExport').addEventListener('click', handleExportSubmit);
+
+    $('attachLayout').addEventListener('change', syncExportStateFromUI);
+    $('attachCases').addEventListener('change', syncExportStateFromUI);
+    $('attachFinance').addEventListener('change', syncExportStateFromUI);
+    $('formatWord').addEventListener('change', syncExportStateFromUI);
+    $('formatPdf').addEventListener('change', syncExportStateFromUI);
+    syncExportStateFromUI();
+
+    $('modalExportDesign').addEventListener('click', (e) => {
+      if (e.target === $('modalExportDesign')) closeExportFlow();
+    });
+    $('modalExportFormat').addEventListener('click', (e) => {
+      if (e.target === $('modalExportFormat')) closeExportFlow();
+    });
 
 
 
