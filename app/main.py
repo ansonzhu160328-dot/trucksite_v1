@@ -173,13 +173,13 @@ async def report_word(request: Request):
         bottom_cell.vertical_alignment = WD_ALIGN_VERTICAL.BOTTOM
 
         p1 = bottom_cell.paragraphs[0]
-        p1.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p1.alignment = WD_ALIGN_PARAGRAPH.CENTER
         r1 = p1.add_run("编制单位：广东盈通智联数字技术有限公司")
         set_cn_font(r1, size_pt=14, bold=False, font_name="宋体")
         format_para(p1, first_line_indent=False)
 
         p2 = bottom_cell.add_paragraph()
-        p2.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p2.alignment = WD_ALIGN_PARAGRAPH.CENTER
         r2 = p2.add_run(f"编制日期：{datetime.now().strftime('%Y年%m月%d日')}")
         set_cn_font(r2, size_pt=14, bold=False, font_name="宋体")
         format_para(p2, first_line_indent=False)
@@ -192,6 +192,19 @@ async def report_word(request: Request):
         pg_num_type = OxmlElement('w:pgNumType')
         pg_num_type.set(qn('w:start'), str(start_num))
         sect_pr.append(pg_num_type)
+
+
+    def _configure_body_header(section):
+        section.header.is_linked_to_previous = False
+        section.different_first_page_header_footer = False
+
+        header = section.header
+        p = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p.clear()
+        run = p.add_run("广东盈通智联数字技术有限公司")
+        set_cn_font(run, size_pt=14, bold=False, font_name="宋体")
+        format_para(p, first_line_indent=False)
 
     def _add_footer_page_field(section):
         footer = section.footer
@@ -336,6 +349,7 @@ async def report_word(request: Request):
 
     section2.footer.is_linked_to_previous = False
     section2.header.is_linked_to_previous = False
+    _configure_body_header(section2)
     _set_section_page_start(section2, start_num=1)
     _add_footer_page_field(section2)
 
