@@ -59,6 +59,9 @@ async def report_word(request: Request):
 
     from docx.shared import Pt
     from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.section import WD_SECTION_START
+    from docx.enum.table import WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE
+    from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
 
     # ===== 封皮标题 =====
@@ -68,9 +71,6 @@ async def report_word(request: Request):
         site_location = "未填写场站位置"
 
     title_text = f"{site_location}重卡充电站初步设计方案"
-
-    from docx.shared import Pt
-    from docx.oxml.ns import qn
 
     # =========================
     # 通用：字体 + 段落格式
@@ -136,6 +136,86 @@ async def report_word(request: Request):
         # 章节结束空一行
         p = doc.add_paragraph("")
         p.paragraph_format.line_spacing = LINE_SPACING
+
+    def _hide_table_borders(table):
+        tbl = table._tbl
+        tbl_pr = tbl.tblPr
+        borders = OxmlElement('w:tblBorders')
+        for edge in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+            elem = OxmlElement(f'w:{edge}')
+            elem.set(qn('w:val'), 'nil')
+            borders.append(elem)
+        tbl_pr.append(borders)
+
+    def add_cover_page():
+        section1 = doc.sections[0]
+        usable_height = section1.page_height - section1.top_margin - section1.bottom_margin
+
+        table = doc.add_table(rows=3, cols=1)
+        _hide_table_borders(table)
+
+        row_heights = [int(usable_height * 0.3), int(usable_height * 0.4), int(usable_height * 0.3)]
+        for idx, row in enumerate(table.rows):
+            row.height = row_heights[idx]
+            row.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
+
+        # 中间：标题（水平+垂直居中）
+        mid_cell = table.cell(1, 0)
+        mid_cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        mid_para = mid_cell.paragraphs[0]
+        mid_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = mid_para.add_run(title_text)
+        set_cn_font(run, size_pt=22, bold=True, font_name="宋体")
+        format_para(mid_para, first_line_indent=False)
+
+        # 底部：编制单位/日期（左对齐+底部对齐）
+        bottom_cell = table.cell(2, 0)
+        bottom_cell.vertical_alignment = WD_ALIGN_VERTICAL.BOTTOM
+
+        p1 = bottom_cell.paragraphs[0]
+        p1.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        r1 = p1.add_run("编制单位：广东盈通智联数字技术有限公司")
+        set_cn_font(r1, size_pt=14, bold=False, font_name="宋体")
+        format_para(p1, first_line_indent=False)
+
+        p2 = bottom_cell.add_paragraph()
+        p2.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        r2 = p2.add_run(f"编制日期：{datetime.now().strftime('%Y年%m月%d日')}")
+        set_cn_font(r2, size_pt=14, bold=False, font_name="宋体")
+        format_para(p2, first_line_indent=False)
+
+    def _set_section_page_start(section, start_num=1):
+        sect_pr = section._sectPr
+        for child in list(sect_pr):
+            if child.tag == qn('w:pgNumType'):
+                sect_pr.remove(child)
+        pg_num_type = OxmlElement('w:pgNumType')
+        pg_num_type.set(qn('w:start'), str(start_num))
+        sect_pr.append(pg_num_type)
+
+    def _add_footer_page_field(section):
+        footer = section.footer
+        p = footer.paragraphs[0] if footer.paragraphs else footer.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        run = p.add_run()
+        fld_begin = OxmlElement('w:fldChar')
+        fld_begin.set(qn('w:fldCharType'), 'begin')
+
+        instr = OxmlElement('w:instrText')
+        instr.set(qn('xml:space'), 'preserve')
+        instr.text = ' PAGE '
+
+        fld_separate = OxmlElement('w:fldChar')
+        fld_separate.set(qn('w:fldCharType'), 'separate')
+
+        fld_end = OxmlElement('w:fldChar')
+        fld_end.set(qn('w:fldCharType'), 'end')
+
+        run._r.append(fld_begin)
+        run._r.append(instr)
+        run._r.append(fld_separate)
+        run._r.append(fld_end)
     
     def normalize_attachments_selected(value):
         if isinstance(value, list):
@@ -248,16 +328,16 @@ async def report_word(request: Request):
 
 
     # =========================
-    # 封皮页（第1页）
+    # 封皮页（第1页）+ 分节（正文从第2页开始）
     # =========================
-    add_cover_line(title_text, size_pt=22, bold=True, align_center=True)
-    doc.add_paragraph("")
-    doc.add_paragraph("")
-    add_cover_line("编制单位：广东盈通智联数字技术有限公司", size_pt=14, bold=False, align_center=True)
-    add_cover_line(f"编制日期：{datetime.now().strftime('%Y年%m月%d日')}", size_pt=14, bold=False, align_center=True)
+    add_cover_page()
 
-    # 分页：正文从第2页开始
-    doc.add_page_break()
+    section2 = doc.add_section(WD_SECTION_START.NEW_PAGE)
+
+    section2.footer.is_linked_to_previous = False
+    section2.header.is_linked_to_previous = False
+    _set_section_page_start(section2, start_num=1)
+    _add_footer_page_field(section2)
 
 
     # =========================
