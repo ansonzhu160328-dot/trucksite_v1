@@ -1,13 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from docx import Document
 import tempfile
-
+import os
+from pathlib import Path
 
 import base64
-import io
-from docx.shared import Inches
+from datetime import datetime
+from docx.shared import Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 
@@ -17,6 +18,16 @@ from app.calc import calc_plan
 app = FastAPI(title="Truck Charging Site V1", version="0.3.0")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+PRODUCT_ASSETS_DIR = Path("/root/trucksite_v1/assets/product")
+ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
+FINANCE_TEXT = """
+金融合作方案（示例）
+1. 可根据项目现金流测算结果，设计分期投放与回款计划。
+2. 可提供设备融资租赁、项目贷款等多种金融工具组合。
+3. 可结合运营数据设置动态授信与风险预警机制。
+4. 具体合作条款以双方签署的正式协议为准。
+""".strip()
 
 
 @app.get("/")
@@ -33,9 +44,14 @@ def calculate(req: CalcRequest):
 
 
 @app.post("/api/report_word")
-def report_word(req: CalcRequest):
+async def report_word(request: Request):
+    raw_data = await request.json()
+    if not isinstance(raw_data, dict):
+        raw_data = {}
+
+    req = CalcRequest.model_validate(raw_data)
     data = req.model_dump()
-    print("DEBUG /api/report_word keys:", sorted(list(data.keys())))
+    print("DEBUG /api/report_word keys:", sorted(list(raw_data.keys())))
     result = calc_plan(data)
 
     # ===== 生成 Word =====
@@ -45,25 +61,13 @@ def report_word(req: CalcRequest):
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.ns import qn
 
-    # ===== 标题 =====
+    # ===== 封皮标题 =====
     site_location = data.get("site_location", "").strip()
 
     if not site_location:
         site_location = "未填写场站位置"
 
     title_text = f"{site_location}重卡充电站初步设计方案"
-
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-    run = p.add_run(title_text)
-    run.font.name = "宋体"
-    run._element.rPr.rFonts.set(qn('w:eastAsia'), "宋体")
-    run.font.size = Pt(22)   # 二号 = 22pt
-    run.bold = True
-
-    # 标题下空一行
-    doc.add_paragraph("")
 
     from docx.shared import Pt
     from docx.oxml.ns import qn
@@ -100,6 +104,13 @@ def report_word(req: CalcRequest):
         if first_line_indent:
             p.paragraph_format.first_line_indent = INDENT_2CH
 
+    def add_cover_line(text, size_pt=14, bold=False, align_center=True):
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER if align_center else WD_ALIGN_PARAGRAPH.LEFT
+        run = p.add_run(text)
+        set_cn_font(run, size_pt=size_pt, bold=bold, font_name="宋体")
+        format_para(p, first_line_indent=False)
+
     def add_title(text):
         # 一级标题：宋体14pt加粗，不缩进，1.5倍行距
         p = doc.add_paragraph()
@@ -126,49 +137,127 @@ def report_word(req: CalcRequest):
         p = doc.add_paragraph("")
         p.paragraph_format.line_spacing = LINE_SPACING
     
-    def append_layout_attachment(doc: Document, data: dict):
-        """
-        在文末追加：
-        附件：场站布局示意图（左对齐）
-        + 布局图 PNG
-        """
-        layout_png_data_url = (data.get("layout_png_data_url") or "").strip()
-        if not layout_png_data_url:
-            return  # 没有就不插入
+    def normalize_attachments_selected(value):
+        if isinstance(value, list):
+            items = value
+        elif isinstance(value, str):
+            items = [value]
+        else:
+            items = []
 
-        layout_title = (data.get("layout_title") or "附件：场站布局示意图").strip()
+        normalized = []
+        for item in items:
+            if not isinstance(item, str):
+                continue
+            v = item.strip().lower()
+            if v in {"layout", "product", "finance"} and v not in normalized:
+                normalized.append(v)
+        return normalized
 
-        # 1) 附件标题（左对齐，建议加粗宋体14）
+    def add_attach_title(text):
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        run = p.add_run(layout_title)
+        run = p.add_run(text)
+        set_cn_font(run, size_pt=14, bold=True, font_name="宋体")
+        format_para(p, first_line_indent=False)
 
-        # 复用你已有的字体函数（如果在作用域内）
-        try:
-            set_cn_font(run, size_pt=14, bold=True, font_name="宋体")
-            format_para(p, first_line_indent=False)
-        except Exception:
-            # 如果你未来移动代码导致 set_cn_font 不在作用域，就至少保证不崩
-            pass
+    def add_attach_hint(text):
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        run = p.add_run(text)
+        set_cn_font(run, size_pt=14, bold=False, font_name="宋体")
+        format_para(p, first_line_indent=False)
 
-        # 2) dataURL -> bytes
-        # 格式：data:image/png;base64,xxxx
+    def parse_layout_png_data_url(layout_png_data_url: str):
+        if not layout_png_data_url:
+            return None
+        b64 = layout_png_data_url
         if "base64," in layout_png_data_url:
             b64 = layout_png_data_url.split("base64,", 1)[1]
-        else:
-            b64 = layout_png_data_url
-
         try:
-            img_bytes = base64.b64decode(b64)
-        except Exception:
-            # base64 不合法就直接跳过，避免导出失败
+            return base64.b64decode(b64)
+        except Exception as e:
+            print("WARN layout_png_data_url decode failed:", e)
+            return None
+
+    def append_layout_attachment(data_dict: dict):
+        add_attach_title((data_dict.get("layout_title") or "附件1：场站布局示意图").strip())
+
+        layout_png_data_url = (data_dict.get("layout_png_data_url") or "").strip()
+        img_bytes = parse_layout_png_data_url(layout_png_data_url)
+        if not img_bytes:
+            add_attach_hint("（未获取到布局图）")
             return
 
-        img_stream = io.BytesIO(img_bytes)
+        tmp_png = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        try:
+            tmp_png.write(img_bytes)
+            tmp_png.close()
+            doc.add_picture(tmp_png.name, width=Cm(15))
+        except Exception as e:
+            print("WARN append layout image failed:", e)
+            add_attach_hint("（未获取到布局图）")
+        finally:
+            try:
+                os.remove(tmp_png.name)
+            except Exception:
+                pass
 
-        # 3) 插入图片（宽度可调：6.3~6.8 英寸通常适配 A4 竖版页面正文区域）
-        doc.add_picture(img_stream, width=Inches(6.5))
+    def append_product_attachment():
+        add_attach_title("附件2：产品及典型案例")
 
+        if not PRODUCT_ASSETS_DIR.exists() or not PRODUCT_ASSETS_DIR.is_dir():
+            add_attach_hint("（未配置产品图片）")
+            return
+
+        image_files = [
+            p for p in PRODUCT_ASSETS_DIR.iterdir()
+            if p.is_file() and p.suffix.lower() in ALLOWED_IMAGE_EXTS
+        ]
+        image_files.sort(key=lambda x: x.name)
+
+        if not image_files:
+            add_attach_hint("（未配置产品图片）")
+            return
+
+        inserted = False
+        for image_path in image_files:
+            try:
+                if image_path.suffix.lower() == ".webp":
+                    print("INFO skip unsupported webp for python-docx:", str(image_path))
+                    continue
+                doc.add_picture(str(image_path), width=Cm(15))
+                doc.add_paragraph("")
+                inserted = True
+            except Exception as e:
+                print("WARN append product image failed:", str(image_path), e)
+
+        if not inserted:
+            add_attach_hint("（未配置产品图片）")
+
+    def append_finance_attachment():
+        add_attach_title("附件3：金融合作方案")
+
+        text = (FINANCE_TEXT or "").strip()
+        if not text:
+            add_attach_hint("（未配置金融方案文本）")
+            return
+
+        for line in [x.strip() for x in text.splitlines() if x.strip()]:
+            add_body(line)
+
+
+    # =========================
+    # 封皮页（第1页）
+    # =========================
+    add_cover_line(title_text, size_pt=22, bold=True, align_center=True)
+    doc.add_paragraph("")
+    doc.add_paragraph("")
+    add_cover_line("编制单位：广东盈通智联数字技术有限公司", size_pt=14, bold=False, align_center=True)
+    add_cover_line(f"编制日期：{datetime.now().strftime('%Y年%m月%d日')}", size_pt=14, bold=False, align_center=True)
+
+    # 分页：正文从第2页开始
+    doc.add_page_break()
 
 
     # =========================
@@ -398,8 +487,17 @@ def report_word(req: CalcRequest):
     add_blank_line()
 
 
-    # ===== 文末附件：场站布局示意图 =====
-    append_layout_attachment(doc, data)
+    # ===== 文末附件：按前端选择动态插入 =====
+    attachments_selected = normalize_attachments_selected(raw_data.get("attachments_selected", []))
+
+    if "layout" in attachments_selected:
+        append_layout_attachment(raw_data)
+
+    if "product" in attachments_selected:
+        append_product_attachment()
+
+    if "finance" in attachments_selected:
+        append_finance_attachment()
 
     # ===== 保存为临时文件并下载 =====
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")
