@@ -269,8 +269,8 @@ def build_report_doc(raw_data: dict) -> Document:
             print("WARN layout_png_data_url decode failed:", e)
             return None
 
-    def append_layout_attachment(data_dict: dict):
-        add_attach_title((data_dict.get("layout_title") or "附件1：场站布局示意图").strip())
+    def append_layout_attachment(data_dict: dict, attach_title: str):
+        add_attach_title(attach_title)
 
         layout_png_data_url = (data_dict.get("layout_png_data_url") or "").strip()
         img_bytes = parse_layout_png_data_url(layout_png_data_url)
@@ -292,8 +292,8 @@ def build_report_doc(raw_data: dict) -> Document:
             except Exception:
                 pass
 
-    def append_product_attachment():
-        add_attach_title("附件2：产品及典型案例")
+    def append_product_attachment(attach_title: str):
+        add_attach_title(attach_title)
 
         if not PRODUCT_ASSETS_DIR.exists() or not PRODUCT_ASSETS_DIR.is_dir():
             add_attach_hint("（未配置产品图片）")
@@ -324,8 +324,8 @@ def build_report_doc(raw_data: dict) -> Document:
         if not inserted:
             add_attach_hint("（未配置产品图片）")
 
-    def append_finance_attachment():
-        add_attach_title("附件3：金融合作方案")
+    def append_finance_attachment(attach_title: str):
+        add_attach_title(attach_title)
 
         text = (FINANCE_TEXT or "").strip()
         if not text:
@@ -577,17 +577,27 @@ def build_report_doc(raw_data: dict) -> Document:
     add_blank_line()
 
 
-    # ===== 文末附件：按前端选择动态插入 =====
+    # ===== 文末附件：按前端选择动态插入（编号连续重排） =====
     attachments_selected = normalize_attachments_selected(raw_data.get("attachments_selected", []))
 
-    if "layout" in attachments_selected:
-        append_layout_attachment(raw_data)
+    attachment_defs = [
+        ("layout", "场站布局示意图"),
+        ("product", "产品及典型案例"),
+        ("finance", "金融合作方案"),
+    ]
+    selected_attachments = [
+        (kind, title) for kind, title in attachment_defs
+        if kind in attachments_selected
+    ]
 
-    if "product" in attachments_selected:
-        append_product_attachment()
-
-    if "finance" in attachments_selected:
-        append_finance_attachment()
+    for idx, (kind, title) in enumerate(selected_attachments, start=1):
+        attach_title = f"附件{idx}：{title}"
+        if kind == "layout":
+            append_layout_attachment(raw_data, attach_title)
+        elif kind == "product":
+            append_product_attachment(attach_title)
+        elif kind == "finance":
+            append_finance_attachment(attach_title)
 
     return doc
 
