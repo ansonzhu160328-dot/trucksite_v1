@@ -171,6 +171,16 @@ def build_report_doc(raw_data: dict) -> Document:
         set_cn_font(run, size_pt=14, bold=False, font_name="宋体")
         format_para(p, first_line_indent=True)
 
+    def add_finance_body(text):
+        # 金融附件正文：宋体14pt，单倍行距，段前段后0磅，首行缩进2字符
+        p = doc.add_paragraph()
+        run = p.add_run(text)
+        set_cn_font(run, size_pt=14, bold=False, font_name="宋体")
+        p.paragraph_format.line_spacing = 1.0
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.first_line_indent = INDENT_2CH
+
     def add_item(text):
         # 条目：用 ■ 符号；不做首行缩进（避免符号被挤歪），1.5倍行距
         p = doc.add_paragraph()
@@ -383,7 +393,7 @@ def build_report_doc(raw_data: dict) -> Document:
             return
 
         for line in [x.strip() for x in text.splitlines() if x.strip()]:
-            add_body(line)
+            add_finance_body(line)
 
 
     # =========================
@@ -641,7 +651,8 @@ def build_report_doc(raw_data: dict) -> Document:
     ]
 
     for idx, (kind, title) in enumerate(selected_attachments, start=1):
-        doc.add_page_break()
+        if idx == 1 or kind in {"layout", "product"}:
+            doc.add_page_break()
         attach_title = f"附件{idx}：{title}"
         if kind == "layout":
             append_layout_attachment(raw_data, attach_title)
