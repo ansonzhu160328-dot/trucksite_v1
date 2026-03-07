@@ -1148,17 +1148,32 @@ th{
     window.URL.revokeObjectURL(url);
   }
 
-  async function exportWord(payload) {
-    if (payload.attachments_selected.includes('layout')) {
-      payload.layout_title = "附件：场站布局示意图";
-      const svgEl = document.querySelector('#layout svg');
-      payload.layout_png_data_url = await svgElementToPngDataUrl(svgEl, 2);
+  async function attachLayoutImageIfNeeded(payload) {
+    if (!payload.attachments_selected ||
+        !payload.attachments_selected.includes('layout')) {
+      return payload;
     }
 
+    const svgEl = document.querySelector('#layout svg');
+
+    if (!svgEl) {
+      payload.layout_png_data_url = '';
+      return payload;
+    }
+
+    payload.layout_title = '附件1：场站布局示意图';
+    payload.layout_png_data_url = await svgElementToPngDataUrl(svgEl, 2);
+
+    return payload;
+  }
+
+  async function exportWord(payload) {
+    await attachLayoutImageIfNeeded(payload);
     await exportFile('/api/report_word', '重卡充电站初步设计方案.docx', payload);
   }
 
   async function exportPdf(payload) {
+    await attachLayoutImageIfNeeded(payload);
     await exportFile('/api/report_pdf', '重卡充电站初步设计方案.pdf', payload);
   }
 
