@@ -208,8 +208,8 @@ pre{
 }
 
 #layout{
-  padding:14px 16px 18px;
-  border-top:1px solid rgba(15,23,42,0.08);
+  padding:0;
+  border-top:none;
 }
 
 #layout .layout-empty{
@@ -316,50 +316,191 @@ th{
   color: rgba(255,255,255,.95);
 }
 
-.result-main{ padding-bottom:12px; }
-.result-section{ padding:0 16px; }
-.result-section + .result-section{ margin-top:14px; }
-.result-section h3{ margin:0 0 10px; }
+:root{
+  --bg-page: #f5f7fb;
+  --bg-card: #ffffff;
+  --bg-header: #1f3654;
+  --border: #e5e7eb;
+  --text-main: #111827;
+  --text-sub: #6b7280;
+  --text-muted: #9ca3af;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+}
 
-.analysis-stack{
+body{
+  background:var(--bg-page);
+  color:var(--text-main);
+  font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+
+button,input,select,textarea,table{
+  font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+
+.topbar{
+  background:var(--bg-header);
+}
+
+.topbar .title{
+  font-size:32px;
+  font-weight:700;
+}
+
+.card,
+details.card,
+.analysis-panel,
+.result-section,
+.detail-collapsible pre{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow:0 1px 3px rgba(15,23,42,0.06);
+}
+
+.card h3,
+.result-section h3,
+.analysis-title h3,
+.detail-header h3{
+  font-size:20px;
+  font-weight:600;
+  color:var(--text-main);
+}
+
+label,.muted,.help,.hint{ color:var(--text-sub); }
+
+input,select{
+  border:1px solid #d1d5db;
+  border-radius:8px;
+  height:40px;
+  padding:10px 12px;
+  font-size:14px;
+  color:var(--text-main);
+  background:#fff;
+}
+input:focus,select:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+  outline:none;
+}
+
+.btn-primary{
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  border-radius:10px;
+  padding:10px 16px;
+  font-size:14px;
+  font-weight:600;
+}
+.btn-primary:hover{ background:var(--primary-hover); filter:none; }
+
+.btn-ghost{
+  background:#fff;
+  color:#374151;
+  border:1px solid #d1d5db;
+  border-radius:10px;
+  padding:10px 16px;
+  font-size:14px;
+  font-weight:600;
+}
+
+.kpi .k{ font-size:14px; font-weight:600; color:var(--text-main); }
+.kpi .v{ font-size:28px; font-weight:700; color:var(--text-main); }
+.kpi .s{ font-size:13px; font-weight:400; color:var(--text-sub); }
+
+.result-main{
+  width:100%;
   display:flex;
   flex-direction:column;
   gap:14px;
-  padding:0 16px 16px;
 }
 
-.analysis-panel{
-  border:1px solid rgba(15,23,42,0.10);
-  border-radius:8px;
-  background:#fff;
-  padding:12px;
+.result-block{
+  width:100%;
+  box-sizing:border-box;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow:0 1px 3px rgba(15,23,42,0.06);
+  overflow:hidden;
 }
 
-.detail-header{
+.result-block__header{
+  min-height:56px;
+  padding:14px 16px 12px;
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  cursor:pointer;
 }
 
-.detail-header h3{ margin:0; }
-
-.detail-toggle{
-  border:1px solid rgba(15,23,42,0.18);
-  background:#fff;
-  border-radius:6px;
-  padding:4px 10px;
-  cursor:pointer;
-  font-size:12px;
+.result-block__title{
+  margin:0;
+  padding:0;
+  font-size:20px;
+  font-weight:600;
+  color:var(--text-main);
+  text-align:left;
 }
 
-.detail-collapsible{ display:none; margin-top:10px; }
+.result-block__actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.result-block__divider{
+  height:1px;
+  margin:0 16px;
+  background:var(--border);
+}
+
+.result-block__body{
+  padding:14px 16px 16px;
+  box-sizing:border-box;
+}
+
+.analysis-title,
+.detail-header{ cursor:pointer; }
+
+.sensitivity-collapsible,
+.detail-collapsible{ display:none; }
+
+.sensitivity-panel.expanded .sensitivity-collapsible,
 .detail-panel.expanded .detail-collapsible{ display:block; }
 
+.card-container{
+  width:100%;
+  box-sizing:border-box;
+}
 
-.modal-mask{
-  position:fixed;
+.section-title,
+.panel-title,
+.card-title{
+  padding-left:0;
+  margin-left:0;
+  text-align:left;
+}
+
+.layout-canvas{
+  box-sizing:border-box;
+  width:100%;
+  margin:0;
+  padding:0;
+  border:0;
+  overflow:auto;
+}
+
+.layout-canvas svg{
+  max-width:100%;
+  display:block;
+}
+
+.modal-mask{  position:fixed;
   inset:0;
   background:rgba(15,23,42,0.45);
   display:none;
@@ -530,48 +671,65 @@ th{
 
   </div>
 
-  <div class="card result-main">
-    <h3>投资评估</h3>
-    <div class="kpis">
-      <div class="kpi">
-        <div class="k">推荐配置</div>
-        <div class="v" id="kpiConfig">—</div>
-        <div class="s" id="kpiStalls">车位：—</div>
-        <div class="s" id="kpiPower">电力容量：—</div>
+    <div class="result-main card-container">
+    <section class="result-block card-container" id="blockInvest">
+      <div class="result-block__header">
+        <h3 class="result-block__title card-title">投资评估</h3>
       </div>
-      <div class="kpi">
-        <div class="k">预计总投资</div>
-        <div class="v" id="kpiInvest">—</div>
-        <div class="s">投资（电力+土建+设备）</div>
-      </div>
-      <div class="kpi">
-        <div class="k">年收入（服务费）</div>
-        <div class="v" id="kpiRevenue">—</div>
-        <div class="s">按服务费口径</div>
-      </div>
-      <div class="kpi">
-        <div class="k">净收入</div>
-        <div class="v" id="kpiNet">—</div>
-        <div class="s">
-          回收期：<span id="kpiPayback">—</span>
-          <span id="kpiBadge" class="badge">—</span>
+      <div class="result-block__divider"></div>
+      <div class="result-block__body">
+        <div class="kpis">
+          <div class="kpi">
+            <div class="k">推荐配置</div>
+            <div class="v" id="kpiConfig">—</div>
+            <div class="s" id="kpiStalls">车位：—</div>
+            <div class="s" id="kpiPower">电力容量：—</div>
+          </div>
+          <div class="kpi">
+            <div class="k">预计总投资</div>
+            <div class="v" id="kpiInvest">—</div>
+            <div class="s">投资（电力+土建+设备）</div>
+          </div>
+          <div class="kpi">
+            <div class="k">年收入（服务费）</div>
+            <div class="v" id="kpiRevenue">—</div>
+            <div class="s">按服务费口径</div>
+          </div>
+          <div class="kpi">
+            <div class="k">净收入</div>
+            <div class="v" id="kpiNet">—</div>
+            <div class="s">
+              回收期：<span id="kpiPayback">—</span>
+              <span id="kpiBadge" class="badge">—</span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-
-    <section class="result-section layout-section">
-      <h3>场站布局示意图</h3>
-      <div id="layout"></div>
-      <div id="layoutRemark" class="muted"></div>
     </section>
 
-    <div class="analysis-stack">
-      <section class="analysis-panel sensitivity-panel">
-        <h3>敏感性分析</h3>
+    <section class="result-block layout-section card-container" id="blockLayout">
+      <div class="result-block__header">
+        <h3 class="result-block__title section-title">场站布局示意图</h3>
+      </div>
+      <div class="result-block__divider"></div>
+      <div class="result-block__body">
+        <div id="layout" class="layout-canvas"></div>
+        <div id="layoutRemark" class="muted"></div>
+      </div>
+    </section>
+
+    <section class="result-block sensitivity-panel expanded card-container" id="sensitivityPanel">
+      <div class="result-block__header analysis-title" id="sensitivityHeader" role="button" tabindex="0" aria-expanded="true">
+        <h3 class="result-block__title panel-title">敏感性分析</h3>
+        <div class="result-block__actions">
+          <button id="btnToggleSensitivity" type="button" class="analysis-toggle">收起 ▾</button>
+        </div>
+      </div>
+      <div class="result-block__divider"></div>
+      <div id="sensitivityContent" class="result-block__body sensitivity-collapsible" aria-hidden="false">
         <div id="sensSummary" class="muted">尚未运行敏感性分析</div>
         <div style="overflow:auto; margin-top:10px;">
-          <table id="sensTable" border="1" cellspacing="0" cellpadding="6"
-            style="border-collapse:collapse; width:100%; min-width:860px;">
+          <table id="sensTable" border="1" cellspacing="0" cellpadding="6" style="min-width:860px;">
             <thead>
               <tr>
                 <th>序号</th>
@@ -588,26 +746,22 @@ th{
             </tbody>
           </table>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="analysis-panel detail-panel" id="detailPanel">
-        <div class="detail-header" id="detailHeader" role="button" tabindex="0" aria-expanded="false">
-          <h3>详细测算</h3>
+    <section class="result-block detail-panel card-container" id="detailPanel">
+      <div class="result-block__header detail-header" id="detailHeader" role="button" tabindex="0" aria-expanded="false">
+        <h3 class="result-block__title panel-title">详细测算</h3>
+        <div class="result-block__actions">
           <button id="btnToggleDetail" type="button" class="detail-toggle">展开 ▸</button>
         </div>
-        <div id="detailContent" class="detail-collapsible">
-          <pre id="out" class="muted" style="background:#fff; color:var(--text); border:1px solid var(--border);"></pre>
-        </div>
-      </section>
-    </div>
+      </div>
+      <div class="result-block__divider"></div>
+      <div id="detailContent" class="result-block__body detail-collapsible" aria-hidden="true">
+        <pre id="out" class="muted" style="background:#fff; color:var(--text); border:1px solid var(--border);"></pre>
+      </div>
+    </section>
 
-  </div>
-
-
-
-  </div>
-
-    </div>
   </div>
 
   <div id="modalExportDesign" class="modal-mask" aria-hidden="true">
@@ -1433,6 +1587,19 @@ th{
     return list;
   }
 
+  function toggleSensitivityPanel() {
+    const panel = $('sensitivityPanel');
+    const content = $('sensitivityContent');
+    const btn = $('btnToggleSensitivity');
+    const header = $('sensitivityHeader');
+    if (!panel || !content || !btn || !header) return;
+
+    const expanded = panel.classList.toggle('expanded');
+    content.setAttribute('aria-hidden', expanded ? 'false' : 'true');
+    header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    btn.textContent = expanded ? '收起 ▾' : '展开 ▸';
+  }
+
   function toggleDetailPanel() {
     const panel = $('detailPanel');
     const content = $('detailContent');
@@ -1489,6 +1656,15 @@ th{
     $('btnWord').addEventListener('click', openExportFlowStepA);
     
     $('btnSens').addEventListener('click', runSensitivity);
+
+    $('btnToggleSensitivity').addEventListener('click', (e) => { e.stopPropagation(); toggleSensitivityPanel(); });
+    $('sensitivityHeader').addEventListener('click', toggleSensitivityPanel);
+    $('sensitivityHeader').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleSensitivityPanel();
+      }
+    });
 
     $('btnToggleDetail').addEventListener('click', (e) => { e.stopPropagation(); toggleDetailPanel(); });
     $('detailHeader').addEventListener('click', toggleDetailPanel);
