@@ -150,6 +150,13 @@ def build_report_doc(raw_data: dict) -> Document:
         if first_line_indent:
             p.paragraph_format.first_line_indent = INDENT_2CH
 
+    def add_cover_line(text, size_pt=14, bold=False, align_center=True):
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER if align_center else WD_ALIGN_PARAGRAPH.LEFT
+        run = p.add_run(text)
+        set_cn_font(run, size_pt=size_pt, bold=bold, font_name="宋体")
+        format_para(p, first_line_indent=False)
+
     def add_title(text):
         # 一级标题：宋体14pt加粗，不缩进，1.5倍行距
         p = doc.add_paragraph()
