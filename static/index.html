@@ -208,8 +208,8 @@ pre{
 }
 
 #layout{
-  padding:14px 16px 18px;
-  border-top:1px solid rgba(15,23,42,0.08);
+  padding:0;
+  border-top:none;
 }
 
 #layout .layout-empty{
@@ -314,6 +314,248 @@ th{
 /* 如果你的 topbar 背景是深蓝，标题也改成浅色更像 Sora 图 */
 .topbar .title{
   color: rgba(255,255,255,.95);
+}
+
+:root{
+  --bg-page: #f5f7fb;
+  --bg-card: #ffffff;
+  --bg-header: #1f3654;
+  --border: #e5e7eb;
+  --text-main: #111827;
+  --text-sub: #6b7280;
+  --text-muted: #9ca3af;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+}
+
+body{
+  background:var(--bg-page);
+  color:var(--text-main);
+  font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+
+button,input,select,textarea,table{
+  font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+
+.topbar{
+  background:var(--bg-header);
+}
+
+.topbar .title{
+  font-size:32px;
+  font-weight:700;
+}
+
+.card,
+details.card,
+.analysis-panel,
+.result-section,
+.detail-collapsible pre{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow:0 1px 3px rgba(15,23,42,0.06);
+}
+
+.card h3,
+.result-section h3,
+.analysis-title h3,
+.detail-header h3{
+  font-size:20px;
+  font-weight:600;
+  color:var(--text-main);
+}
+
+label,.muted,.help,.hint{ color:var(--text-sub); }
+
+input,select{
+  border:1px solid #d1d5db;
+  border-radius:8px;
+  height:40px;
+  padding:10px 12px;
+  font-size:14px;
+  color:var(--text-main);
+  background:#fff;
+}
+input:focus,select:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+  outline:none;
+}
+
+.btn-primary{
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  border-radius:10px;
+  padding:10px 16px;
+  font-size:14px;
+  font-weight:600;
+}
+.btn-primary:hover{ background:var(--primary-hover); filter:none; }
+
+.btn-ghost{
+  background:#fff;
+  color:#374151;
+  border:1px solid #d1d5db;
+  border-radius:10px;
+  padding:10px 16px;
+  font-size:14px;
+  font-weight:600;
+}
+
+.kpi .k{ font-size:14px; font-weight:600; color:var(--text-main); }
+.kpi .v{ font-size:28px; font-weight:700; color:var(--text-main); }
+.kpi .s{ font-size:13px; font-weight:400; color:var(--text-sub); }
+
+.result-main{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.result-block{
+  width:100%;
+  box-sizing:border-box;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow:0 1px 3px rgba(15,23,42,0.06);
+  overflow:hidden;
+}
+
+.result-block__header{
+  min-height:56px;
+  padding:14px 16px 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.result-block__title{
+  margin:0;
+  padding:0;
+  font-size:20px;
+  font-weight:600;
+  color:var(--text-main);
+  text-align:left;
+}
+
+.result-block__actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.result-block__divider{
+  height:1px;
+  margin:0 16px;
+  background:var(--border);
+}
+
+.result-block__body{
+  padding:14px 16px 16px;
+  box-sizing:border-box;
+}
+
+.analysis-title,
+.detail-header{ cursor:pointer; }
+
+.sensitivity-collapsible,
+.detail-collapsible{ display:none; }
+
+.sensitivity-panel.expanded .sensitivity-collapsible,
+.detail-panel.expanded .detail-collapsible{ display:block; }
+
+.card-container{
+  width:100%;
+  box-sizing:border-box;
+}
+
+.section-title,
+.panel-title,
+.card-title{
+  padding-left:0;
+  margin-left:0;
+  text-align:left;
+}
+
+.layout-canvas{
+  box-sizing:border-box;
+  width:100%;
+  margin:0;
+  padding:0;
+  border:0;
+  overflow:auto;
+}
+
+.layout-canvas svg{
+  max-width:100%;
+  display:block;
+}
+
+.modal-mask{  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,0.45);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:99;
+}
+
+.modal-mask.show{ display:flex; }
+
+.modal{
+  width:min(520px, calc(100vw - 32px));
+  background:#fff;
+  border-radius:10px;
+  border:1px solid rgba(15,23,42,0.12);
+  box-shadow:0 16px 36px rgba(15,23,42,0.24);
+  overflow:hidden;
+}
+
+.modal h4{
+  margin:0;
+  padding:14px 16px;
+  font-size:16px;
+  border-bottom:1px solid rgba(15,23,42,0.08);
+}
+
+.modal-body{ padding:12px 14px; }
+
+.modal-option{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:10px;
+  padding:9px 0;
+  font-size:15px;
+  font-weight:500;
+  line-height:1.45;
+  color:#0f172a;
+}
+
+.modal-option input[type="checkbox"],
+.modal-option input[type="radio"]{
+  width:16px;
+  height:16px;
+  margin:0;
+  padding:0;
+  flex:0 0 auto;
+}
+
+.modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  padding:12px 16px 16px;
+  border-top:1px solid rgba(15,23,42,0.08);
 }
 </style>
 
@@ -429,78 +671,126 @@ th{
 
   </div>
 
-  <div class="card">
-    <h3>投资评估</h3>
+    <div class="result-main card-container">
+    <section class="result-block card-container" id="blockInvest">
+      <div class="result-block__header">
+        <h3 class="result-block__title card-title">投资评估</h3>
+      </div>
+      <div class="result-block__divider"></div>
+      <div class="result-block__body">
         <div class="kpis">
-      <div class="kpi">
-        <div class="k">推荐配置</div>
-        <div class="v" id="kpiConfig">—</div>
-        <div class="s" id="kpiStalls">车位：—</div>
-        <div class="s" id="kpiPower">电力容量：—</div>
-      </div>
-      <div class="kpi">
-        <div class="k">预计总投资</div>
-        <div class="v" id="kpiInvest">—</div>
-        <div class="s">投资（电力+土建+设备）</div>
-      </div>
-      <div class="kpi">
-        <div class="k">年收入（服务费）</div>
-        <div class="v" id="kpiRevenue">—</div>
-        <div class="s">按服务费口径</div>
-      </div>
-      <div class="kpi">
-        <div class="k">净收入</div>
-        <div class="v" id="kpiNet">—</div>
-        <div class="s">
-          回收期：<span id="kpiPayback">—</span>
-          <span id="kpiBadge" class="badge">—</span>
+          <div class="kpi">
+            <div class="k">推荐配置</div>
+            <div class="v" id="kpiConfig">—</div>
+            <div class="s" id="kpiStalls">车位：—</div>
+            <div class="s" id="kpiPower">电力容量：—</div>
+          </div>
+          <div class="kpi">
+            <div class="k">预计总投资</div>
+            <div class="v" id="kpiInvest">—</div>
+            <div class="s">投资（电力+土建+设备）</div>
+          </div>
+          <div class="kpi">
+            <div class="k">年收入（服务费）</div>
+            <div class="v" id="kpiRevenue">—</div>
+            <div class="s">按服务费口径</div>
+          </div>
+          <div class="kpi">
+            <div class="k">净收入</div>
+            <div class="v" id="kpiNet">—</div>
+            <div class="s">
+              回收期：<span id="kpiPayback">—</span>
+              <span id="kpiBadge" class="badge">—</span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <hr style="margin:8px 0 16px; border:none; border-top:1px solid #eee;">
+    <section class="result-block layout-section card-container" id="blockLayout">
+      <div class="result-block__header">
+        <h3 class="result-block__title section-title">场站布局示意图</h3>
+      </div>
+      <div class="result-block__divider"></div>
+      <div class="result-block__body">
+        <div id="layout" class="layout-canvas"></div>
+        <div id="layoutRemark" class="muted"></div>
+      </div>
+    </section>
 
-<h3>场站布局示意图</h3>
-<div id="layout"></div>
-<div id="layoutRemark" class="muted"></div>
+    <section class="result-block sensitivity-panel expanded card-container" id="sensitivityPanel">
+      <div class="result-block__header analysis-title" id="sensitivityHeader" role="button" tabindex="0" aria-expanded="true">
+        <h3 class="result-block__title panel-title">敏感性分析</h3>
+        <div class="result-block__actions">
+          <button id="btnToggleSensitivity" type="button" class="analysis-toggle">收起 ▾</button>
+        </div>
+      </div>
+      <div class="result-block__divider"></div>
+      <div id="sensitivityContent" class="result-block__body sensitivity-collapsible" aria-hidden="false">
+        <div id="sensSummary" class="muted">尚未运行敏感性分析</div>
+        <div style="overflow:auto; margin-top:10px;">
+          <table id="sensTable" border="1" cellspacing="0" cellpadding="6" style="min-width:860px;">
+            <thead>
+              <tr>
+                <th>序号</th>
+                <th>利用率(kWh/枪·天)</th>
+                <th>服务费(元/度)</th>
+                <th>租金(元/㎡·月)</th>
+                <th>净年现金流(万元/年)</th>
+                <th>净回收期(年)</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody id="sensBody">
+              <tr><td colspan="7" class="muted">（等待运行）</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-<hr style="margin:16px 0; border:none; border-top:1px solid #eee;">
-
-<h3>敏感性分析</h3>
-<div id="sensSummary" class="muted">尚未运行敏感性分析</div>
-
-<div style="overflow:auto; margin-top:10px;">
-  <table id="sensTable" border="1" cellspacing="0" cellpadding="6"
-    style="border-collapse:collapse; width:100%; min-width:860px;">
-    <thead>
-      <tr>
-        <th>序号</th>
-        <th>利用率(kWh/枪·天)</th>
-        <th>服务费(元/度)</th>
-        <th>租金(元/㎡·月)</th>
-        <th>净年现金流(万元/年)</th>
-        <th>净回收期(年)</th>
-        <th>状态</th>
-      </tr>
-    </thead>
-    <tbody id="sensBody">
-      <tr><td colspan="7" class="muted">（等待运行）</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<hr style="margin:16px 0; border:none; border-top:1px solid #eee;">
-
-<h3>详细测算</h3>
-<pre id="out" class="muted" style="background:#fff; color:var(--text); border:1px solid var(--border);"></pre>
-
-
-</div>
-
-
+    <section class="result-block detail-panel card-container" id="detailPanel">
+      <div class="result-block__header detail-header" id="detailHeader" role="button" tabindex="0" aria-expanded="false">
+        <h3 class="result-block__title panel-title">详细测算</h3>
+        <div class="result-block__actions">
+          <button id="btnToggleDetail" type="button" class="detail-toggle">展开 ▸</button>
+        </div>
+      </div>
+      <div class="result-block__divider"></div>
+      <div id="detailContent" class="result-block__body detail-collapsible" aria-hidden="true">
+        <pre id="out" class="muted" style="background:#fff; color:var(--text); border:1px solid var(--border);"></pre>
+      </div>
+    </section>
 
   </div>
 
+  <div id="modalExportDesign" class="modal-mask" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalExportDesignTitle">
+      <h4 id="modalExportDesignTitle">导出初步设计</h4>
+      <div class="modal-body">
+        <label class="modal-option"><input id="attachLayout" type="checkbox" checked> 附件1：场站布局示意图</label>
+        <label class="modal-option"><input id="attachCases" type="checkbox" checked> 附件2：产品及典型案例</label>
+        <label class="modal-option"><input id="attachFinance" type="checkbox"> 附件3：金融合作方案</label>
+      </div>
+      <div class="modal-actions">
+        <button id="btnModalCancelA" type="button" class="btn-ghost">取消</button>
+        <button id="btnModalNext" type="button" class="btn-primary">下一步</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalExportFormat" class="modal-mask" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalExportFormatTitle">
+      <h4 id="modalExportFormatTitle">导出格式</h4>
+      <div class="modal-body">
+        <label class="modal-option"><input id="formatWord" type="radio" name="exportFormat" value="word" checked> Word</label>
+        <label class="modal-option"><input id="formatPdf" type="radio" name="exportFormat" value="pdf"> PDF</label>
+      </div>
+      <div class="modal-actions">
+        <button id="btnModalPrev" type="button" class="btn-ghost">上一步</button>
+        <button id="btnModalCancelB" type="button" class="btn-ghost">取消</button>
+        <button id="btnModalExport" type="button" class="btn-primary">导出</button>
+      </div>
     </div>
   </div>
 
@@ -509,6 +799,17 @@ th{
 
   function money(x) { return (Math.round(x)).toLocaleString('zh-CN') + " 元"; }
   function num(x) { return (Math.round(x * 100) / 100).toLocaleString('zh-CN'); }
+
+  const exportState = {
+    attachments: {
+      layout: true,
+      product: true,
+      finance: false,
+    },
+    format: 'word'
+  };
+
+  let isExporting = false;
 
   function resetDefaults() {
     if ($('loc')) $('loc').value = "";
@@ -626,34 +927,51 @@ th{
       }
 
 
-      let summary = `
-【场站建设初设建议和回报评估】
+      const detailReport = `【场站建设初设建议】
 
-充电设备配置：${d.n_recommend} 台 400kW 一机双枪充电桩
-预计总投资：${investWan} 万元
-预计年收入（服务费口径）：${revenueWan} 万元
-预计净年现金流（扣租金/人工）：${revenueNetWan} 万元
-预计回报周期（净收入）：${paybackNet} 年
-`;
+推荐配置：
+${d.n_recommend} 台 400kW 一机双枪充电桩
+充电车位：${d.stalls} 个
+配套变压器容量：${num(d.power_capacity_kva || 0)} kVA
 
-      const lines = [];
-      lines.push(`推荐桩数 N = ${d.n_recommend}（电力约束 n_power=${d.n_power}；面积约束 n_area=${d.n_area}）`);
-      lines.push(`车位数 = ${d.stalls}（1桩服务2车位）`);
-      lines.push(`场地面积 = ${num(d.site_area_sqm)} ㎡；模块占用面积 = ${num(d.used_area_sqm)} ㎡`);
-      lines.push(`投资：电力 ${money(d.invest_power_yuan)}；土建 ${money(d.invest_civil_yuan)}；设备 ${money(d.invest_pile_yuan)}；合计 ${money(d.invest_total_yuan)}`);
-      lines.push(`年充电量 = ${num(d.energy_year_kwh)} kWh；年收入（按服务费口径）= ${money(d.revenue_year_yuan)}`);
-      lines.push(`年租金 = ${money(d.rent_year_yuan)}；年人工 = ${money(d.labor_year_yuan)}`);
-      lines.push(`净年现金流 = ${money(d.revenue_net_year_yuan)}；净回收期 = ${paybackNet} 年`);
 
-      if (d.notes && d.notes.length) {
-        lines.push("风险/提示：");
-        d.notes.forEach(x => lines.push(" - " + x));
-      }
+【投资及收益测算】
+
+总投资：${investWan} 万元
+
+年收入（服务费口径）：${revenueWan} 万元
+场地年租金：${(d.rent_year_yuan / 10000).toFixed(1)} 万元
+人工费用：${(d.labor_year_yuan / 10000).toFixed(1)} 万元
+
+净年现金流：${revenueNetWan} 万元
+
+静态回收期：${paybackNet} 年
+
+
+【工程测算依据】
+
+场地面积：${num(d.site_area_sqm)} ㎡
+
+年充电量：${num(d.energy_year_kwh)} kWh
+
+投资构成：
+电力投资：${money(d.invest_power_yuan)}
+土建投资：${money(d.invest_civil_yuan)}
+设备投资：${money(d.invest_pile_yuan)}
+合计投资：${money(d.invest_total_yuan)}
+
+
+【测算说明】
+
+1、本测算基于当前输入的场地尺寸、设备功率及行业平均利用率进行估算。
+2、年收入按照充电服务费口径测算，不含电费价差收益。
+3、场地租金、人工成本可根据实际情况调整。
+4、本结果仅作为项目初步投资评估参考。`;
 
       const remark = "备注：如需详细的场站设计方案（CAD设计图）、产品配置方案及参数、请联系13427615930。";
 
         // 详细测算：只放测算文字，不再拼接备注
-        $('out').innerText = summary + "\n\n" + lines.join("\n");
+        $('out').innerText = detailReport;
 
         // 备注：放到“场站布局示意图”区域左下角
         const remarkEl = document.getElementById('layoutRemark');
@@ -1017,39 +1335,64 @@ th{
     }
   }
 
-  async function exportWord() {
-    try {
-      const payload = buildPayload();
+  async function exportFile(endpoint, filename, payload) {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-      // ✅ 追加：把“场站布局示意图”作为附件传给后端
-      payload.layout_title = "附件：场站布局示意图";
-      const svgEl = document.querySelector('#layout svg');
-      payload.layout_png_data_url = await svgElementToPngDataUrl(svgEl, 2);
-
-      const res = await fetch('/api/report_word', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        const t = await res.text();
-        alert("导出失败：" + t);
-        return;
+    if (!res.ok) {
+      let errText = '';
+      try {
+        const data = await res.json();
+        errText = String(data?.detail || data?.message || '').trim();
+      } catch (_) {
+        errText = (await res.text()).trim();
       }
 
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = "重卡充电站初步设计方案.docx";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (e) {
-      alert("导出异常：" + e.message);
+      const msg = errText || `HTTP ${res.status}`;
+      throw new Error(msg);
     }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
+  async function attachLayoutImageIfNeeded(payload) {
+    if (!payload.attachments_selected ||
+        !payload.attachments_selected.includes('layout')) {
+      return payload;
+    }
+
+    const svgEl = document.querySelector('#layout svg');
+
+    if (!svgEl) {
+      payload.layout_png_data_url = '';
+      return payload;
+    }
+
+    payload.layout_title = '附件1：场站布局示意图';
+    payload.layout_png_data_url = await svgElementToPngDataUrl(svgEl, 2);
+
+    return payload;
+  }
+
+  async function exportWord(payload) {
+    await attachLayoutImageIfNeeded(payload);
+    await exportFile('/api/report_word', '重卡充电站初步设计方案.docx', payload);
+  }
+
+  async function exportPdf(payload) {
+    await attachLayoutImageIfNeeded(payload);
+    await exportFile('/api/report_pdf', '重卡充电站初步设计方案.pdf', payload);
   }
 
 
@@ -1187,15 +1530,157 @@ th{
     }
   }
 
+  function showModal(id) {
+    const modal = $(id);
+    if (!modal) return;
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function hideModal(id) {
+    const modal = $(id);
+    if (!modal) return;
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function openExportFlowStepA() {
+    hideModal('modalExportFormat');
+    showModal('modalExportDesign');
+  }
+
+  function openExportFlowStepB() {
+    hideModal('modalExportDesign');
+    showModal('modalExportFormat');
+  }
+
+  function closeExportFlow() {
+    hideModal('modalExportDesign');
+    hideModal('modalExportFormat');
+  }
+
+  function syncExportStateFromUI() {
+    exportState.attachments.layout = !!$('attachLayout')?.checked;
+    exportState.attachments.product = !!$('attachCases')?.checked;
+    exportState.attachments.finance = !!$('attachFinance')?.checked;
+    exportState.format = $('formatPdf')?.checked ? 'pdf' : 'word';
+  }
+
+  function getAttachmentsSelected() {
+    const list = [];
+    if (exportState.attachments.layout) list.push('layout');
+    if (exportState.attachments.product) list.push('product');
+    if (exportState.attachments.finance) list.push('finance');
+    return list;
+  }
+
+  function toggleSensitivityPanel() {
+    const panel = $('sensitivityPanel');
+    const content = $('sensitivityContent');
+    const btn = $('btnToggleSensitivity');
+    const header = $('sensitivityHeader');
+    if (!panel || !content || !btn || !header) return;
+
+    const expanded = panel.classList.toggle('expanded');
+    content.setAttribute('aria-hidden', expanded ? 'false' : 'true');
+    header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    btn.textContent = expanded ? '收起 ▾' : '展开 ▸';
+  }
+
+  function toggleDetailPanel() {
+    const panel = $('detailPanel');
+    const content = $('detailContent');
+    const btn = $('btnToggleDetail');
+    const header = $('detailHeader');
+    if (!panel || !content || !btn || !header) return;
+
+    const expanded = panel.classList.toggle('expanded');
+    content.setAttribute('aria-hidden', expanded ? 'false' : 'true');
+    header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    btn.textContent = expanded ? '收起 ▾' : '展开 ▸';
+  }
+
+  async function handleExportSubmit() {
+    if (isExporting) return;
+
+    syncExportStateFromUI();
+    const attachments_selected = getAttachmentsSelected();
+    const export_format = exportState.format;
+    const payload = buildPayload();
+    payload.attachments_selected = attachments_selected;
+    payload.export_format = export_format;
+
+    console.log(`[Export] format=${export_format}`);
+    console.log('[Export] attachments_selected=' + JSON.stringify(attachments_selected));
+    console.log('[Export] payload.attachments_selected exists? ' + Object.prototype.hasOwnProperty.call(payload, 'attachments_selected'));
+
+    isExporting = true;
+    closeExportFlow();
+    try {
+      if (export_format === 'pdf') {
+        await exportPdf(payload);
+      } else {
+        await exportWord(payload);
+      }
+    } catch (e) {
+      const msg = String(e?.message || e || '未知错误');
+      if (msg.includes('LibreOffice/soffice 未安装')) {
+        alert('服务器未安装 LibreOffice，PDF 暂不可用。请先安装 LibreOffice。');
+      } else {
+        alert('导出失败：' + msg);
+      }
+    } finally {
+      isExporting = false;
+    }
+  }
+
 
 
   // 绑定事件：彻底避免 onclick / 作用域 / 缓存等坑
   window.addEventListener('DOMContentLoaded', () => {
     $('btnReset').addEventListener('click', resetDefaults);
     $('btnCalc').addEventListener('click', runCalc);
-    $('btnWord').addEventListener('click', exportWord);
+    $('btnWord').addEventListener('click', openExportFlowStepA);
     
     $('btnSens').addEventListener('click', runSensitivity);
+
+    $('btnToggleSensitivity').addEventListener('click', (e) => { e.stopPropagation(); toggleSensitivityPanel(); });
+    $('sensitivityHeader').addEventListener('click', toggleSensitivityPanel);
+    $('sensitivityHeader').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleSensitivityPanel();
+      }
+    });
+
+    $('btnToggleDetail').addEventListener('click', (e) => { e.stopPropagation(); toggleDetailPanel(); });
+    $('detailHeader').addEventListener('click', toggleDetailPanel);
+    $('detailHeader').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleDetailPanel();
+      }
+    });
+
+    $('btnModalCancelA').addEventListener('click', closeExportFlow);
+    $('btnModalNext').addEventListener('click', openExportFlowStepB);
+    $('btnModalPrev').addEventListener('click', openExportFlowStepA);
+    $('btnModalCancelB').addEventListener('click', closeExportFlow);
+    $('btnModalExport').addEventListener('click', handleExportSubmit);
+
+    $('attachLayout').addEventListener('change', syncExportStateFromUI);
+    $('attachCases').addEventListener('change', syncExportStateFromUI);
+    $('attachFinance').addEventListener('change', syncExportStateFromUI);
+    $('formatWord').addEventListener('change', syncExportStateFromUI);
+    $('formatPdf').addEventListener('change', syncExportStateFromUI);
+    syncExportStateFromUI();
+
+    $('modalExportDesign').addEventListener('click', (e) => {
+      if (e.target === $('modalExportDesign')) closeExportFlow();
+    });
+    $('modalExportFormat').addEventListener('click', (e) => {
+      if (e.target === $('modalExportFormat')) closeExportFlow();
+    });
 
 
 
