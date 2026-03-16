@@ -213,7 +213,9 @@ def build_report_doc(raw_data: dict) -> Document:
                 cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
                 for p in cell.paragraphs:
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    p.paragraph_format.line_spacing = LINE_SPACING
+                    p.paragraph_format.space_before = Pt(6)
+                    p.paragraph_format.space_after = Pt(6)
+                    p.paragraph_format.line_spacing = 1
 
     def add_simple_table(headers, rows):
         table = doc.add_table(rows=1, cols=len(headers))
