@@ -106,7 +106,7 @@ def build_report_doc(raw_data: dict) -> Document:
     from docx.shared import Pt
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.enum.section import WD_SECTION_START
-    from docx.enum.table import WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE
+    from docx.enum.table import WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE, WD_TABLE_ALIGNMENT
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
 
@@ -204,9 +204,10 @@ def build_report_doc(raw_data: dict) -> Document:
             cells = table.add_row().cells
             for i, text in enumerate(row):
                 cell_p = cells[i].paragraphs[0]
-                cell_p.paragraph_format.line_spacing = LINE_SPACING
                 run = cell_p.add_run(str(text))
                 set_cn_font(run, size_pt=14, bold=False, font_name="宋体")
+
+        format_report_table(table)
 
     def add_body_bold(text, first_line_indent=False):
         p = doc.add_paragraph()
