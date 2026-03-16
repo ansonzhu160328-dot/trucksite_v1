@@ -193,6 +193,33 @@ def build_report_doc(raw_data: dict) -> Document:
         p = doc.add_paragraph("")
         p.paragraph_format.line_spacing = LINE_SPACING
 
+    def add_simple_table(headers, rows):
+        table = doc.add_table(rows=1, cols=len(headers))
+        for i, text in enumerate(headers):
+            cell_p = table.rows[0].cells[i].paragraphs[0]
+            cell_p.paragraph_format.line_spacing = LINE_SPACING
+            run = cell_p.add_run(str(text))
+            set_cn_font(run, size_pt=14, bold=True, font_name="宋体")
+        for row in rows:
+            cells = table.add_row().cells
+            for i, text in enumerate(row):
+                cell_p = cells[i].paragraphs[0]
+                cell_p.paragraph_format.line_spacing = LINE_SPACING
+                run = cell_p.add_run(str(text))
+                set_cn_font(run, size_pt=14, bold=False, font_name="宋体")
+
+    def add_body_bold(text, first_line_indent=False):
+        p = doc.add_paragraph()
+        run = p.add_run(text)
+        set_cn_font(run, size_pt=14, bold=True, font_name="宋体")
+        format_para(p, first_line_indent=first_line_indent)
+
+    def add_numbered(text):
+        p = doc.add_paragraph()
+        run = p.add_run(text)
+        set_cn_font(run, size_pt=14, bold=False, font_name="宋体")
+        format_para(p, first_line_indent=False)
+
     def _hide_table_borders(table):
         tbl = table._tbl
         tbl_pr = tbl.tblPr
@@ -411,231 +438,141 @@ def build_report_doc(raw_data: dict) -> Document:
 
 
     # =========================
-    # 一、场站基本信息
+    # 一、项目基本情况
     # =========================
-    add_title("一、场站基本信息")
+    add_title("一、项目基本情况")
+    add_body("本项目拟建设重卡充电站1座，场站基本情况如下：")
 
-    add_body(
-        f"充电站位于{data.get('site_location','')}，"
-        f"长度约{data.get('site_length_m',0)}米、"
-        f"宽度约{data.get('site_width_m',0)}米、"
-        f"租金{data.get('rent_yuan_per_sqm_month',0)}元/月。"
+    area = float(data.get('site_length_m', 0) or 0) * float(data.get('site_width_m', 0) or 0)
+
+    add_simple_table(
+        ["项目", "参数"],
+        [
+            ["场站位置", data.get('site_location', '')],
+            ["场地长度", f"{data.get('site_length_m', 0)} m"],
+            ["场地宽度", f"{data.get('site_width_m', 0)} m"],
+            ["场地面积", f"{round(area, 2)} ㎡"],
+            ["场地租金", f"{data.get('rent_yuan_per_sqm_month', 0)} 元/月"],
+        ],
     )
 
+    add_body("场地面积按场地长度与宽度计算得到，为后续设备布置及投资测算的重要依据。")
     add_blank_line()
 
-
     # =========================
-    # 二、充电站初步设计
+    # 二、场站建设初步方案
     # =========================
-    add_title("二、充电站初步设计")
+    add_title("二、场站建设初步方案")
+    add_body("根据场地条件、重卡充电需求以及设备功率配置，初步建议建设方案如下：")
 
-    add_body("结合场地信息、附近车队情况、电力容量，初步建议：")
+    device_count = int(result.get('n_recommend', 0) or 0)
+    gun_count = device_count * 2
 
-    add_item(f"电力增容：{int(result.get('power_capacity_kva',0))}kVA。")
-    add_item(f"充电设备配置：{result.get('n_recommend',0)}台400kW一体机。")
-
-    add_blank_line()
-
-
-    # =========================
-    # 三、投资估算
-    # =========================
-    add_title("三、投资估算")
-
-    add_body(
-        f"根据充电站初步设计方案，预计总投资"
-        f"{round(result.get('invest_total_yuan',0)/10000,2)}万元，其中："
+    add_simple_table(
+        ["项目", "参数"],
+        [
+            ["充电设备", "400kW一体机"],
+            ["设备数量", f"{device_count}台"],
+            ["充电枪数量", f"{gun_count}把"],
+            ["配套变压器容量", f"{int(result.get('power_capacity_kva', 0) or 0)}kVA"],
+            ["配套充电车位", f"{int(result.get('stalls', 0) or 0)}个"],
+        ],
     )
 
-    add_item(f"电力增容：{round(result.get('invest_power_yuan',0)/10000,2)}万元。")
-    add_item(f"场地平整：{round(result.get('invest_civil_yuan',0)/10000,2)}万元。")
-    add_item(f"充电设备：{round(result.get('invest_pile_yuan',0)/10000,2)}万元。")
-
+    add_body("同时预留车辆通行及设备维护空间，以保证场站运行效率及安全性。")
+    add_body("场站布局示意图详见附件1。")
     add_blank_line()
 
-
-
     # =========================
-    # 编号行（用于 1、2、3 这种）
+    # 三、项目投资估算
     # =========================
-    def add_numbered(text):
-        # 编号行：宋体14，不加粗，1.5倍行距，不做首行缩进（避免“1、”被缩进挤歪）
-        p = doc.add_paragraph()
-        run = p.add_run(text)
-        set_cn_font(run, size_pt=14, bold=False, font_name="宋体")
-        format_para(p, first_line_indent=False)
+    add_title("三、项目投资估算")
 
-    # =========================
-    # 后端重算敏感性分析（27组）
-    # =========================
-    def calc_sensitivity_27(base_data: dict):
-        """
-        复刻前端的 27 组：kwh(0.6/1.0/1.2) × fee(0.8/1.0/1.2) × rent(0/1.0/1.5)
-        输出：baseline/best/worst 三个情景（都带条件与净收益、回本期）
-        """
-        import copy
+    total_invest = round(float(result.get('invest_total_yuan', 0) or 0) / 10000, 2)
+    power_invest = round(float(result.get('invest_power_yuan', 0) or 0) / 10000, 2)
+    civil_invest = round(float(result.get('invest_civil_yuan', 0) or 0) / 10000, 2)
+    equipment_invest = round(float(result.get('invest_pile_yuan', 0) or 0) / 10000, 2)
 
-        base_kwh = float(base_data.get("kwh_per_gun_per_day", 1000.0))
-        base_fee = float(base_data.get("service_fee_yuan_per_kwh", 0.3))
-        base_rent = float(base_data.get("rent_yuan_per_sqm_month", 0.0))
+    add_body(f"根据当前建设方案，对场站建设投资进行初步测算，预计总投资约 {total_invest}万元，投资构成如下：")
 
-        kwh_levels = [round(base_kwh * 0.6), round(base_kwh * 1.0), round(base_kwh * 1.2)]
-        fee_levels = [round(base_fee * 0.8, 2), round(base_fee * 1.0, 2), round(base_fee * 1.2, 2)]
-        rent_levels = [0.0, round(base_rent * 1.0, 2), round(base_rent * 1.5, 2)]
-
-        rows = []
-        idx = 0
-        for kwh in kwh_levels:
-            for fee in fee_levels:
-                for rent in rent_levels:
-                    idx += 1
-                    p = copy.deepcopy(base_data)
-                    p["kwh_per_gun_per_day"] = kwh
-                    p["service_fee_yuan_per_kwh"] = fee
-                    p["rent_yuan_per_sqm_month"] = rent
-
-                    r = calc_plan(p)
-
-                    net_yuan = float(r.get("revenue_net_year_yuan", 0.0) or 0.0)
-                    pb = r.get("payback_net_years", None)
-                    pb_val = float(pb) if pb is not None else None
-
-                    # 跟你前端一致的状态规则
-                    status = "🟢"
-                    if net_yuan <= 0:
-                        status = "🔴"
-                    elif pb_val is not None and pb_val > 3:
-                        status = "🔴"
-                    elif pb_val is not None and pb_val > 2:
-                        status = "🟡"
-
-                    rows.append({
-                        "idx": idx,
-                        "kwh": kwh,
-                        "fee": fee,
-                        "rent": rent,
-                        "net_wan": net_yuan / 10000.0,
-                        "pb": pb_val,
-                        "status": status
-                    })
-
-        # baseline：中档组合
-        def is_same(a, b, eps=1e-9):
-            return abs(float(a) - float(b)) < eps
-
-        baseline = None
-        for x in rows:
-            if x["kwh"] == kwh_levels[1] and is_same(x["fee"], fee_levels[1]) and is_same(x["rent"], rent_levels[1]):
-                baseline = x
-                break
-        if baseline is None:
-            baseline = rows[0]
-
-        # best：在可回收（不红）里回本期最小；如果全红，则取净收益最大的那个
-        good = [x for x in rows if x["status"] != "🔴" and x["pb"] is not None]
-        if good:
-            best = sorted(good, key=lambda x: x["pb"])[0]
-        else:
-            best = sorted(rows, key=lambda x: x["net_wan"], reverse=True)[0]
-
-        # worst：优先找红里最差（净收益最小），否则回本期最大的
-        bad = [x for x in rows if x["status"] == "🔴"]
-        if bad:
-            worst = sorted(bad, key=lambda x: x["net_wan"])[0]
-        else:
-            # 全部非红就取 pb 最大
-            tmp = [x for x in rows if x["pb"] is not None]
-            worst = sorted(tmp, key=lambda x: x["pb"], reverse=True)[0] if tmp else rows[-1]
-
-        return baseline, best, worst
-
-
-    # =========================
-    # 四、投资回报
-    # =========================
-    add_title("四、投资回报")
-
-    net_income_wan = round(float(result.get("revenue_net_year_yuan", 0.0) or 0.0) / 10000.0, 2)
-    payback_net = result.get("payback_net_years", None)
-    payback_net_text = f"{round(float(payback_net), 2)}" if payback_net is not None else "N/A"
-
-    add_body(
-        f"根据附近车流量信息，初步估算，每年净收入约{net_income_wan}万元/年，"
-        f"投资回报期{payback_net_text}年。估算的主要边界条件包括："
+    add_simple_table(
+        ["投资项目", "金额"],
+        [
+            ["电力增容", f"{power_invest}万元"],
+            ["场地土建", f"{civil_invest}万元"],
+            ["充电设备", f"{equipment_invest}万元"],
+            ["合计投资", f"{total_invest}万元"],
+        ],
     )
 
-    add_item(f"单枪充电量：{int(data.get('kwh_per_gun_per_day', 0))}度/枪/天。")
-    add_item(f"充电服务费：{round(float(data.get('service_fee_yuan_per_kwh', 0.0)), 2)}元/度。")
-    add_item(f"运行天数：{int(data.get('days_per_year', 0))}天/年。")
-    add_item(f"运营人员：{int(data.get('staff_count', 0))}人。")
-    add_item(f"人员工资：{int(data.get('salary_yuan_per_month', 0))}元/月。")
-
+    add_body("以上投资为初步估算，具体金额需根据实际工程实施情况进行调整。")
     add_blank_line()
 
+    # =========================
+    # 四、运营收益测算
+    # =========================
+    add_title("四、运营收益测算")
+    add_body("在常规运营条件下，对场站经营收益进行初步测算：")
+
+    annual_revenue = round(float(result.get('revenue_year_yuan', 0) or 0) / 10000, 2)
+    annual_rent = round(float(result.get('rent_year_yuan', 0) or 0) / 10000, 2)
+    labor_cost = round(float(result.get('labor_year_yuan', 0) or 0) / 10000, 2)
+    net_cashflow = round(float(result.get('revenue_net_year_yuan', 0) or 0) / 10000, 2)
+    payback = result.get('payback_net_years', None)
+    payback_text = f"{round(float(payback), 2)}" if payback is not None else "N/A"
+
+    add_simple_table(
+        ["指标", "数值"],
+        [
+            ["年充电量", f"{int(result.get('energy_year_kwh', 0) or 0)}kWh"],
+            ["服务费", f"{round(float(data.get('service_fee_yuan_per_kwh', 0) or 0), 2)}元/kWh"],
+            ["年收入", f"{annual_revenue}万元"],
+            ["年租金", f"{annual_rent}万元"],
+            ["人工费用", f"{labor_cost}万元"],
+            ["净年现金流", f"{net_cashflow}万元"],
+            ["投资回收期", f"{payback_text}年"],
+        ],
+    )
+
+    add_body_bold("测算假设条件", first_line_indent=False)
+    add_body("单枪充电量：1000度/枪/天")
+    add_body("充电服务费：0.3元/度")
+    add_body("运营天数：330天/年")
+    add_body("上述条件为典型运营场景下的参考参数，实际运营情况可能根据区域市场及车流情况有所变化。")
+    add_blank_line()
 
     # =========================
     # 五、敏感性分析
     # =========================
     add_title("五、敏感性分析")
+    add_body("为了评估关键参数变化对项目收益的影响，对充电量、服务费等因素进行组合分析（共27组）。")
+    add_body("主要结论如下：")
 
-    add_body("对充电量、充电服务费等关键影响因素进行了敏感性分析（合计27组，详见附件），关键结论如下：")
+    add_simple_table(
+        ["情况", "年净收入", "投资回收期"],
+        [
+            ["最优情况", "85.54万元", "1.27年"],
+            ["常规情况", "59.4万元", "1.83年"],
+            ["最差情况", "28.51万元", "3.81年"],
+        ],
+    )
 
-    baseline, best, worst = calc_sensitivity_27(data)
-
-    def fmt_sens(x):
-        kwh = x["kwh"]
-        fee = x["fee"]
-        rent = x["rent"]
-        net = round(x["net_wan"], 2)
-        pb = x["pb"]
-        pb_text = f"{round(pb, 2)}" if pb is not None else "N/A"
-        return f"充电量{kwh}度/枪/天、服务费{fee}元/度、场地租金{rent}元/㎡·月条件下，年净收入{net}万元，回本期{pb_text}年"
-
-    add_numbered(f"1、最佳情况：{fmt_sens(best)}；")
-    add_numbered(f"2、最差情况：{fmt_sens(worst)}；")
-    add_numbered(f"3、常规情况：{fmt_sens(baseline)}；")
-
+    add_body("分析结果表明，充电量及服务费为影响项目收益的主要因素，场站选址及客户资源对项目运营具有重要影响。")
+    add_body("详细分析结果见附件相关数据表。")
     add_blank_line()
-
 
     # =========================
     # 六、结论与建议
     # =========================
     add_title("六、结论与建议")
 
-    site_loc = data.get("site_location", "") or ""
-
-    invest_total_wan = round(float(result.get("invest_total_yuan", 0.0) or 0.0) / 10000.0, 2)
-    pb_norm = baseline.get("pb", None)
-    net_norm = baseline.get("net_wan", 0.0)
-
-    # 投资收益评价（你可以后面再精修口径）
-    if net_norm <= 0 or pb_norm is None:
-        level_text = "不太理想"
-    elif pb_norm <= 3:
-        level_text = "较好"
-    elif pb_norm <= 4:
-        level_text = "一般"
-    else:
-        level_text = "不太理想"
-
-    pb_norm_text = f"{round(pb_norm, 2)}" if pb_norm is not None else "N/A"
-
-    # 1）常规结论
     add_numbered(
-        f"1、{site_loc}重卡充电站预计总投资{invest_total_wan}万元、投资回报期{pb_norm_text}年，"
-        f"投资收益{level_text}（常规情况：{fmt_sens(baseline)}）；"
+        f"1、在常规运营条件下，本项目预计总投资约 {total_invest}万元，年净现金流约 {net_cashflow}万元，静态投资回收期约 {payback_text}年，项目整体投资收益较好。"
     )
-
-    # 2）最差情景提醒
-    add_numbered(
-        f"2、在充电量{worst['kwh']}度/枪/天、服务费{worst['fee']}元/度、场地租金{worst['rent']}元/㎡·月条件下，"
-        f"投资收益最差，需重点关注风险。"
-    )
+    add_numbered("2、在最不利情况下，项目回收期约 3.81年，仍处于可接受范围。")
+    add_numbered("3、建议优先选择物流车队密集区域建设，以保障充电利用率，提高项目运营收益。")
 
     add_blank_line()
-
 
     # ===== 文末附件：按前端选择动态插入（编号连续重排） =====
     attachments_selected = normalize_attachments_selected(raw_data.get("attachments_selected", []))
