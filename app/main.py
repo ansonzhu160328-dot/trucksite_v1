@@ -150,6 +150,13 @@ def build_report_doc(raw_data: dict) -> Document:
         if first_line_indent:
             p.paragraph_format.first_line_indent = INDENT_2CH
 
+    def add_cover_line(text, size_pt=14, bold=False, align_center=True):
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER if align_center else WD_ALIGN_PARAGRAPH.LEFT
+        run = p.add_run(text)
+        set_cn_font(run, size_pt=size_pt, bold=bold, font_name="宋体")
+        format_para(p, first_line_indent=False)
+
     def add_title(text):
         # 一级标题：宋体14pt加粗，不缩进，1.5倍行距
         p = doc.add_paragraph()
@@ -186,32 +193,11 @@ def build_report_doc(raw_data: dict) -> Document:
         p = doc.add_paragraph("")
         p.paragraph_format.line_spacing = LINE_SPACING
 
-    def format_report_table(table):
-        table.alignment = WD_TABLE_ALIGNMENT.CENTER
-
-        tbl = table._tbl
-        tbl_pr = tbl.tblPr
-        borders = OxmlElement('w:tblBorders')
-        for edge in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
-            elem = OxmlElement(f'w:{edge}')
-            elem.set(qn('w:val'), 'single')
-            elem.set(qn('w:sz'), '8')
-            elem.set(qn('w:space'), '0')
-            elem.set(qn('w:color'), '000000')
-            borders.append(elem)
-        tbl_pr.append(borders)
-
-        for row in table.rows:
-            for cell in row.cells:
-                cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-                for p in cell.paragraphs:
-                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    p.paragraph_format.line_spacing = LINE_SPACING
-
     def add_simple_table(headers, rows):
         table = doc.add_table(rows=1, cols=len(headers))
         for i, text in enumerate(headers):
             cell_p = table.rows[0].cells[i].paragraphs[0]
+            cell_p.paragraph_format.line_spacing = LINE_SPACING
             run = cell_p.add_run(str(text))
             set_cn_font(run, size_pt=14, bold=True, font_name="宋体")
         for row in rows:
