@@ -1343,14 +1343,7 @@ ${d.n_recommend} 台 400kW 一机双枪充电桩
     });
 
     if (!res.ok) {
-      let errText = '';
-      try {
-        const data = await res.json();
-        errText = String(data?.detail || data?.message || '').trim();
-      } catch (_) {
-        errText = (await res.text()).trim();
-      }
-
+      const errText = (await res.text()).trim();
       const msg = errText || `HTTP ${res.status}`;
       throw new Error(msg);
     }

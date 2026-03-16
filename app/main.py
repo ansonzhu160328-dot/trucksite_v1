@@ -193,6 +193,28 @@ def build_report_doc(raw_data: dict) -> Document:
         p = doc.add_paragraph("")
         p.paragraph_format.line_spacing = LINE_SPACING
 
+    def format_report_table(table):
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+        tbl = table._tbl
+        tbl_pr = tbl.tblPr
+        borders = OxmlElement('w:tblBorders')
+        for edge in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+            elem = OxmlElement(f'w:{edge}')
+            elem.set(qn('w:val'), 'single')
+            elem.set(qn('w:sz'), '8')
+            elem.set(qn('w:space'), '0')
+            elem.set(qn('w:color'), '000000')
+            borders.append(elem)
+        tbl_pr.append(borders)
+
+        for row in table.rows:
+            for cell in row.cells:
+                cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+                for p in cell.paragraphs:
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    p.paragraph_format.line_spacing = LINE_SPACING
+
     def add_simple_table(headers, rows):
         table = doc.add_table(rows=1, cols=len(headers))
         for i, text in enumerate(headers):
